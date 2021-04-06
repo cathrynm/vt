@@ -157,6 +157,8 @@ void drawClearScreen(void)
 	OS.iocb[0].command = IOCB_PUTCHR;
 	cio(0);
 	OS.dspflg = 1; // Just presume draw
+	OS.rowcrs = 0;
+	OS.colcrs = 0;
 }
 
 void cursorHide(void)
@@ -183,6 +185,8 @@ void cursorUpdate(unsigned char x, unsigned char y)
 	OS.iocb[0].buflen = 1;
 	OS.iocb[0].command = IOCB_PUTCHR;
 	cio(0);
+	OS.colcrs = x + OS.lmargn;
+	OS.rowcrs = y;
 	OS.dspflg = 1; // Just presume draw
 }
 
@@ -210,6 +214,14 @@ void drawCharsAt(unsigned char *buffer, unsigned char bufferLen, unsigned char x
 	OS.iocb[0].buflen = bufferLen;
 	OS.iocb[0].command = IOCB_PUTCHR;
 	cio(0);
+	if (x + bufferLen > OS.rmargn) {
+		OS.colcrs = OS.lmargn;
+		if (y < SCREENLINES -1) OS.rowcrs = y + 1;
+		else OS.rowcrs = SCREENLINES - 1;
+	} else {
+		OS.colcrs = x + bufferLen;
+		OS.rowcrs = y;
+	}
 	if (logMapTouch) {
 		OS.logmap[0] = OS.logmap[1] = OS.logmap[2] =  OS.logmap[3] = 0xff; 
 	}
