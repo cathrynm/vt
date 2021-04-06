@@ -9,8 +9,10 @@ struct screenDataStruct {
 	unsigned char screenWidth;
 	unsigned char lastCharX, lastCharY, bufferLen, bufferX, bufferY;
 	unsigned char xep80;
+	unsigned char directDraw;
 	unsigned char clearBuffer[SCREENCOLUMNS+1];
 	unsigned char buffer[SCREENCOLUMNS];
+	unsigned short lineTab[SCREENLINES];
 };
 
 screenStruct screen;
@@ -22,19 +24,21 @@ extern struct {
 	unsigned char LMARGN_save;
 } crt0;
 
-static unsigned char sAtascii[4] = {0x20, 0x00, 0x40, 0x60};
-static unsigned short lineTab[24] = {
-			40* 0, 40* 1, 40* 2, 40* 3, 40 * 4, 40* 5, 40* 6, 40* 7, 40* 8, 40* 9,
-			40*10, 40*11, 40*12, 40*13, 40 *14, 40*15, 40*16, 40*17, 40*18, 40*19,
-			40*20, 40*21, 40*22, 40*23
-			};
-
 void writeScreen(unsigned char *s, unsigned char len, unsigned char x, unsigned char y)
 {
-	unsigned char *p = OS.savmsc + x + lineTab[y], n;
-	for (;n--;) {
+	static unsigned char sAtascii[4] = {0x40, 0x00, 0x20, 0x60};
+	unsigned char *p, *pStart, c;
+	if ((x > OS.rmargn) || (y >= SCREENLINES) || !len) return;
+	pStart = OS.savmsc + x + screen.lineTab[y];
+	if (len > OS.rmargn + 1 - x)len = OS.rmargn + 1 -x;
+
+	for (p = pStart;len--;) {
 		c = *s++;
-		*p++ = sAtascii[(c& 0x60) >> 5] | (c & ~0x60);
+		*p++ = sAtascii[(c & 0x60) >> 5] | (c & 0x9f);
+	}
+	if (((unsigned short) OS.oldadr >= (unsigned short) pStart)  && 
+		 ((unsigned short) OS.oldadr < (unsigned short) p)){
+		OS.oldchr = pStart[(unsigned short)OS.oldadr - (unsigned short)pStart];
 	}
 }
 
@@ -92,6 +96,29 @@ unsigned char XEP80Test(void)
 	return 0;
 }
 
+unsigned char directDrawTest(void)
+{
+	unsigned char n, y;
+	static const unsigned char drawTest[]  = {CH_CLR, '0', CH_EOL, '1'};
+	OS.dspflg = 0;
+	OS.iocb[0].buffer = drawTest;
+	OS.iocb[0].buflen = 4;
+	OS.iocb[0].command = IOCB_PUTCHR;
+	cio(0);
+	OS.dspflg = 1; // Just presume draw
+	if (OS.savmsc[0] + 32 != '0')return 0;
+	for (n = 1;n < 255;n++) {
+		if (OS.savmsc[n]  + 32 == '1') {
+
+			for (y = 0;y< SCREENLINES;y++) {
+				screen.lineTab[y] = (unsigned short) y * (unsigned short) n;
+			}
+			return n;
+		}
+	}
+	return 0;
+}
+
 void initScreen(void)
 {
 	unsigned char err = ERR_NONE;
@@ -110,9 +137,9 @@ void initScreen(void)
 	} else {
 		screen.screenWidth = OS.rmargn + 1 - OS.lmargn; 
 	}
+	screen.directDraw = directDrawTest();
 	drawClearScreen();
 	OS.dspflg = 1; // Just presume draw
-
 }
 
 void screenRestore(void)
@@ -130,6 +157,12 @@ void drawClearScreen(void)
 	OS.iocb[0].command = IOCB_PUTCHR;
 	cio(0);
 	OS.dspflg = 1; // Just presume draw
+}
+
+void cursorHide(void)
+{
+	if (OS.crsinh) return;
+	OS.crsinh = 1;
 }
 
 void cursorUpdate(unsigned char x, unsigned char y)
@@ -158,6 +191,10 @@ void drawCharsAt(unsigned char *buffer, unsigned char bufferLen, unsigned char x
 {
 	unsigned char logMapTouch = 0;
 	if (x > OS.rmargn)return;
+	if (screen.directDraw) {
+		writeScreen(buffer, bufferLen, x, y);
+		return;
+	}
 	if (x + bufferLen > OS.rmargn) {
 		bufferLen = OS.rmargn + 1 - x;
 		if (y >= SCREENLINES -1) {
@@ -165,17 +202,17 @@ void drawCharsAt(unsigned char *buffer, unsigned char bufferLen, unsigned char x
 			if (!bufferLen)return;  // Never draw into the very last character of the last line
 		}
 		logMapTouch = y + 1;
-
-	} 		OS.logmap[0] = OS.logmap[1] = OS.logmap[2] = OS.logmap[3] = 0; // HACK, prevents atari from wrapping
+		OS.logmap[0] = OS.logmap[1] = OS.logmap[2] = OS.logmap[3] = 0; // HACK, prevents atari from wrapping
+	} 
 	OS.rowcrs = y;
 	OS.colcrs = x;
 	OS.iocb[0].buffer = buffer;
 	OS.iocb[0].buflen = bufferLen;
 	OS.iocb[0].command = IOCB_PUTCHR;
 	cio(0);
-	//if (logMapTouch) {
+	if (logMapTouch) {
 		OS.logmap[0] = OS.logmap[1] = OS.logmap[2] =  OS.logmap[3] = 0xff; 
-	//}
+	}
 }
 
 
@@ -196,7 +233,6 @@ void drawCharAt(unsigned char c, unsigned char attribute, unsigned char x, unsig
 	}
 	screen.buffer[screen.bufferLen++] = c ^(attribute & 0x80);
 	screen.bufferX++;
-	flushBuffer(); // Does buffering even help I wonder?
 }
 
 void drawClearCharsAt(unsigned char len, unsigned char x, unsigned char y)
@@ -232,6 +268,7 @@ void drawInsertLine(unsigned char y, unsigned char yBottom)
 	static unsigned char ch = CH_INSLINE, chD = CH_DELLINE;
 	flushBuffer();
 	OS.dspflg = 0;
+	OS.crsinh = 1;
 	OS.colcrs = OS.lmargn;
 	if (yBottom < SCREENLINES -1) {
 		OS.rowcrs = yBottom;
@@ -252,6 +289,7 @@ void drawDeleteLine(unsigned char y, unsigned char yBottom)
 {
 	static unsigned char ch = CH_DELLINE, chI = CH_INSLINE;
 	flushBuffer();
+	OS.crsinh = 1;
 	OS.dspflg = 0;
 	OS.rowcrs = y;
 	OS.colcrs = OS.lmargn;

@@ -17,5 +17,7 @@ void drawScrollScreenDown(unsigned char yTop, unsigned char yBottom);
 void drawScrollScreen(unsigned char yTop, unsigned char yBottom);
 void screenRestore(void);
 void drawClearScreen(void);
+void flushBuffer(void);
+void cursorHide(void);
 
 #endif

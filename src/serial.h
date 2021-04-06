@@ -71,5 +71,8 @@ void sendSerialResponse(unsigned char *s, unsigned char len);
 unsigned char serialOpen(unsigned char *device, unsigned char deviceLen, unsigned char baudWordStop, unsigned char mon);
 unsigned char serialClose(unsigned char *device, unsigned char deviceLen);
 unsigned char readData(void);
+unsigned short getBaud(void);
+unsigned char getBits(void);
+unsigned char getParity(void);
 
 #endif

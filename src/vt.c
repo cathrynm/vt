@@ -91,7 +91,7 @@ void vtSendCursor(unsigned char cursor)
 			"\033[A", "\033[B", "\033[D", "\033[C"  
 		},
 		{
-			"\033OA", "\033OB", "\033OD", "\033[C"
+			"\033OA", "\033OB", "\033OD", "\033OC"
 		}};
 	unsigned char *s = cusorCodes[vt.modeP[MODEP_DECCKM]][cursor];
 	sendResponse(s, strlen(s));
@@ -146,13 +146,15 @@ void resetVt(void)
 	for (n = 0;n<VTSCREENLINES;n++)vt.lineAttributes[n] = 0;
 	for (n = 0;n<NUMMODES;n++)vt.mode[n] = 0;
 	for (n = 0;n<NUMPRIVATE;n++)vt.modeP[n] = 0;
-	vt.modeP[MODEP_DECAWM] = 0;
 	vt.modeP[MODEP_DECANM] = 1; 
-	vt.modeP[MODEP_DECOM] = 0; // full screen
 	vt.mode[MODE_SRM] = 1; // Disable local echo
-	vt.mode[MODE_LNM] = 0;
 	cursorSave();
 	clearScreen(2);
+
+}
+
+void fixCursor(void)
+{
 	cursorUpdate(vt.x, vt.y);
 }
 
@@ -328,25 +330,37 @@ void deleteCharacters(unsigned char num)
 	for (;num--;)drawDeleteChar(vt.x, vt.y);
 }
 
-void charToA(unsigned char v, unsigned char *s)
+unsigned char charToA(unsigned char v, unsigned char *s, unsigned char m)
 {
 	unsigned char n;
 	unsigned char dig[3] = {100, 10, 1};
-	for (n = 0;n<3;n++) {
-		s[n] = '0';
+	for ( n = 0;n<3;n++) {
+		if (v < dig[n] && n< 2)continue;
+		s[m] = '0';
 		while (v >= dig[n]) {
 			v -= dig[n];
-			s[n]++;
+			s[m]++;
 		}
+		m++;
 	}
+	return m;
+}
+
+void reportStatus(void)
+{
+	static unsigned char reportChar[4] = "\033[0n";
+	sendResponse(reportChar, 4);
 }
 
 void reportCursor(void)
 {
-	static unsigned char reportChar[10] = "\033[000;000R";
-	charToA(vt.y+1, &reportChar[2]);
-	charToA(vt.x+1, &reportChar[6]);
-	sendResponse(reportChar, 10);
+	unsigned char off;
+	static unsigned char reportChar[10] = "\033[";
+	off = charToA(vt.y+1  - (vt.modeP[MODEP_DECOM]? vt.tMargin: 0), reportChar, 2);
+	reportChar[off++] = ';';
+	off = charToA(vt.x+1, reportChar, off);
+	reportChar[off++] = 'R';
+	sendResponse(reportChar, off);
 }
 
 void reportTerminal(void)
@@ -360,6 +374,71 @@ void reportTerminalType(void)
 	static unsigned char reportTerminal[4] = "\033[0n"; // are we ever not okay?
 	sendResponse(reportTerminal, 4);
 }
+
+unsigned char serialToVt(unsigned short speed)
+{
+	switch(speed) {
+		case 50:return 0;
+		case 75:return 8;
+		case 110:return 16;
+		case 134:return 24;
+		case 150:return 32;
+		case 200: return 40;
+		case 300: return 48;
+		case 600: return 56;
+		case 1200: return 64;
+		case 1800:return 72;
+		case 2000:return 80;
+		case 2400:return 88;
+		case 3600:return 96;
+		case 4800:return 104;
+		case 9600:return 112;
+		case 19200:return 120;
+		default:return 0;
+	}
+}
+
+unsigned bitsToVt(unsigned char bits)
+{
+	switch(bits) {
+		case 8:return 1;
+		case 7: return 2;
+		default:return 0;
+	}
+}
+
+unsigned parityToVt(unsigned char parity)
+{
+	switch(parity) {
+		case RXLAT_NOCHGPAR:return 1;
+		case RXLAT_SETPARODD:return 4;
+		case RXLAT_SETPAREVEN: return 5;
+		case RXLAT_SETPARITY1: return 0;
+		default:return 0;
+	}
+}
+
+void reportTerminalParams(unsigned char mode) 
+{
+	unsigned char off;
+	static unsigned char reportTerminal[32] = "\033[";
+	off = charToA(mode, reportTerminal, 2);
+	reportTerminal[off++] = ';';
+	off = charToA(parityToVt(getParity()), reportTerminal, off); // parity
+	reportTerminal[off++] = ';';
+	off = charToA(bitsToVt(getBits()), reportTerminal, off); // bits
+	reportTerminal[off++] = ';';
+	off = charToA(serialToVt(getBaud()), reportTerminal, off); // xspd
+	reportTerminal[off++] = ';';
+	off = charToA(serialToVt(getBaud()), reportTerminal, off); // rspd
+	reportTerminal[off++] = ';';
+	off = charToA(1, reportTerminal, off); // cmul
+	reportTerminal[off++] = ';';
+	off = charToA(15, reportTerminal, off); // flags
+	reportTerminal[off++] = 'x';
+	sendResponse(reportTerminal, off);
+}
+
 void setAttributes(void)
 {
 	unsigned char n;
@@ -385,7 +464,7 @@ void setVMargins(unsigned char top, unsigned char bottom)
 	vt.tMargin = top;
 	vt.bMargin = bottom;
 	vt.x = 0;
-	vt.y = !vt.modeP[MODEP_DECOM]? vt.tMargin : 0;
+	vt.y = vt.modeP[MODEP_DECOM]? vt.tMargin : 0;
 }
 
 void cursorSave(void)
@@ -622,6 +701,7 @@ void processCommand(unsigned char c)
 		case 'n': // device status
 			switch(esc.params[0]) {
 				case 5: // terminal status
+					reportStatus();
 					break;
 				case 6: //
 					reportCursor();
@@ -634,6 +714,10 @@ void processCommand(unsigned char c)
 		case 'r': // set top and bottom margins
 			setVMargins(esc.params[0], esc.params[1]);
 			break;
+		case 'x':
+			reportTerminalParams(esc.params[0]);
+			break;
+
 		case 'y': // confidence test
 			break;
 		default:
@@ -763,17 +847,21 @@ void processVt52Command(unsigned char c)
 		case 'I':
 			moveUp(1, 0);
 			break;
+		case 'J':
+			clearScreen(0);
+			break;
 		case 'K':
 			clearLine(0); // to end of line
 			break;
-		case 'J':
-			clearLine(1);
-			break;
+
 		case 'Y': // cursor Position
 			esc.commandIndex++; // Get the positions next
 			return;
 		case 'Z':
-			sendResponse("\033/E", 3);
+			sendResponse("\033/Z", 3);
+			break;
+		case '<':
+			vt.modeP[MODEP_DECANM] = 1; // Exit vt52 mode.
 			break;
 		default:
 			break;
@@ -784,19 +872,21 @@ void processVt52Command(unsigned char c)
 // characters outside of 0-127 are sent here, to be drawn.  They're already translated to be drawable here. 
 void displayUtf8Char(unsigned char c, unsigned char attribute)
 {
+	cursorHide();
 	addChar(c, vt.attribute ^ attribute);
 	esc.commandIndex = 0;
-	cursorUpdate(vt.x, vt.y);
 }
 
 void debugVt(unsigned char c)
 {
+	/*
 	static unsigned char debugBuffer[256];
 	static unsigned char debugIndex = 0;
 	OS.stack[0]  = (unsigned char) debugBuffer;
 	OS.stack[1] = (unsigned char) (((unsigned short) debugBuffer) >> 8);
 	OS.stack[2] = debugIndex;
 	debugBuffer[debugIndex++] = c;
+	*/
 }
 
 void processChar(unsigned char c) {
@@ -804,7 +894,8 @@ void processChar(unsigned char c) {
 	unsigned char ch, attrib;
 	unsigned short paramVal;
 	debugVt(c);
-	switch(c) {
+	cursorHide();
+	if (c < VT_SPACE)switch(c) {
 		case VT_BEL:
 			drawBell();
 			break;
@@ -848,16 +939,21 @@ void processChar(unsigned char c) {
 			break;
 		default: break;
     }
-    if ((c >= VT_SPACE) && (c < VT_DEL)) {
+    else if ((c >= VT_SPACE) && (c < VT_DEL)) {
 		if (!vt.modeP[MODEP_DECANM]) {
 			if (esc.commandIndex == 1) {
 				processVt52Command(c);
 			} else if (esc.commandIndex == 2) {
 				esc.secondChar = c;
-				esc.commandIndex++;
-			} else {
-				vt52CursorPosition(esc.secondChar - 32, c - 32);
+				vt52CursorPosition(esc.secondChar - 32, vt.y);
 				esc.commandIndex = 0;
+			} else {
+				wCh = charToUtf(c);
+				if (!(wCh & 0xff80)) {
+					ch = (unsigned char) wCh;attrib = 0;
+					convertAsciiToVisibleChar(&ch, &attrib);
+				} else convertShortToVisibleChar(wCh, &ch, &attrib);
+				addChar(ch, vt.attribute ^ attrib);
 			}
 		} else {
 			if (esc.commandIndex) {
@@ -899,7 +995,7 @@ void processChar(unsigned char c) {
 			}
 		}
 	}
-	cursorUpdate(vt.x, vt.y);
+
 }
 
 void processChars(unsigned char *s, unsigned char len)

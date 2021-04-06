@@ -21,10 +21,49 @@ typedef struct serialDataStruct serialStruct;
 struct serialDataStruct {
 	unsigned char buffer[RBUFFERSIZE];
 	unsigned char readBuffer[RBUFFERSIZE];
+	unsigned char baudWordStop, xlat;
 };
 
 serialStruct serial;
 
+unsigned short getBaud(void)
+{
+	switch(serial.baudWordStop & 0xf) {
+        case BAUD_300: return 300;
+        case BAUD_45_5: return 45;
+        case BAUD_50: return 50;
+        case BAUD_56_875: return 56;
+        case BAUD_75: return 75;
+        case BAUD_110: return 110;
+        case BAUD_134_5: return 134;
+        case BAUD_150:return 150;
+        case BAUD_300A:return 300;
+        case BAUD_900:return 900;
+        case BAUD_1200:return 1200;
+        case BAUD_1800:return 1800;
+        case BAUD_2400:return 2400;
+        case BAUD_4800:return 4800;
+        case BAUD_9600:return 9600;
+        case BAUD_19200:return 19200;
+        default: return 0;
+	}
+}
+
+unsigned char getBits(void)
+{
+	switch(serial.baudWordStop & 0x30) {
+		case RWORDSIZE_8: return 8;
+		case RWORDSIZE_7: return 7;
+		case RWORDSIZE_6: return 6;
+		case RWORDSIZE_5: return 5;
+		default: return 0;
+	}
+}
+
+unsigned char getParity(void)
+{
+	return serial.xlat & 3;
+}
 
 unsigned char controlLines(unsigned char *device, unsigned char deviceLen, unsigned char aux1) {
 	unsigned char err = ERR_NONE;
@@ -46,6 +85,7 @@ unsigned char serialXlat(unsigned char *device, unsigned char deviceLen, unsigne
 	OS.iocb[3].aux1 = aux1;
 	OS.iocb[3].aux2 = wontTranslate;
 	OS.iocb[3].command = IOCB_XLAT;
+	serial.xlat = aux1;
 	cio(3);
 	iocbErrUpdate(3, &err);
 	return err;
@@ -82,6 +122,7 @@ unsigned char serialClose(unsigned char *device, unsigned char deviceLen)
 unsigned char serialOpen(unsigned char *device, unsigned char deviceLen, unsigned char baudWordStop, unsigned char mon)
 {
 	unsigned char err = ERR_NONE;
+	serial.baudWordStop = baudWordStop;
 	OS.iocb[3].buffer = device;
 	OS.iocb[3].buflen = deviceLen;
 	OS.iocb[3].aux1 = baudWordStop;

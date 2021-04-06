@@ -12,5 +12,6 @@ void vtSendCr(void);
 void resetVt(void);
 void processChars(unsigned char *s, unsigned char len);
 void sendResponse(unsigned char *s, unsigned char len);
+void fixCursor(void);
 
 #endif
