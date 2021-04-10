@@ -11,5 +11,6 @@ void decodeUtf8Char(unsigned char c);
 unsigned char initChio(void);
 unsigned char handleInput(void);
 unsigned char closeChio(void);
+unsigned char isXep80(void);
 
 #endif

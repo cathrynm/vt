@@ -15,10 +15,14 @@ struct chioDataStruct {
 	unsigned char *keyTab;
 	unsigned char chbas; // Original character set coming in here.
 	unsigned char fullAscii; // {}~` characters are copied in.
+	unsigned char xep80;
 };
 
 chioStruct chio;
 
+unsigned char isXep80(void) {
+	return chio.xep80;
+}
 
 
 
@@ -659,13 +663,42 @@ void initAscii(unsigned char fontBase) {
 	chio.fullAscii = 1;
 }
 
+void drawChar(unsigned char ch)
+{
+	OS.iocb[0].buffer = &ch;
+	OS.iocb[0].buflen = 1;
+	OS.iocb[0].command = IOCB_PUTCHR;
+	cio(0);
+}
+
+unsigned char XEP80Test(void)
+{
+	static unsigned char *eColon = "E:";
+	unsigned char err;
+	if (OS.rmargn > 39) {
+		err = ERR_NONE;
+		OS.rowcrs = 0;OS.colcrs = OS.lmargn;
+		drawChar(CH_ESC);drawChar(255);
+		OS.iocb[0].buffer = eColon;
+		OS.iocb[0].buflen = strlen(eColon);
+		OS.iocb[0].aux1 = 12;
+		OS.iocb[0].aux2 = 245;
+		OS.iocb[0].command = 20;
+		cio(0);
+		iocbErrUpdate(0, &err);
+		return err == ERR_NONE;
+	}
+	return 0;
+}
+
 unsigned char initChio(void) // Don't use malloc from here.
 {
 	unsigned char err = ERR_NONE;
 	unsigned short startAddress = (unsigned short)_STARTADDRESS__; // Start the program on 0x400 boundary.  So 0x400 below is good
 	memClear((unsigned char *)&chio, sizeof(chio));
+	chio.xep80 = XEP80Test();
 	chio.chbas = OS.chbas;
-	if ((unsigned short) OS.memlo + 0x400 <= startAddress) {
+	if (((unsigned short) OS.memlo + 0x400 <= startAddress) && !chio.xep80) {
 		startAddress -= 0x400;
 		initAscii(startAddress >> 8);
 	}
