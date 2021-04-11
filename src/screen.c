@@ -159,22 +159,17 @@ void setXEPYPos(unsigned char y) {
 	cio(0);
 }
 
-
-// Put CRs at the end of lines.
-void drawXEPEol(void)
+void drawXEPCharAt(unsigned char c, unsigned char x, unsigned char y)
 {
-	unsigned char y;
-	setXEPLastChar(CH_EOL);
-	setXEPHPos(80);
-	for (y = 0;y<XEPLINES;y++) {
-		setXEPYPos(y);
-		OS.iocb[0].buffer = eColon;
-		OS.iocb[0].buflen = 2;
-		OS.iocb[0].aux1 = 12;
-		OS.iocb[0].aux2 = XEP_WRITEBYTE;
-		OS.iocb[0].command = 20;
-		cio(0);
-	}
+	setXEPLastChar(c);
+	setXEPHPos(x);
+	setXEPYPos(y);
+	OS.iocb[0].buffer = eColon;
+	OS.iocb[0].buflen = 2;
+	OS.iocb[0].aux1 = 12;
+	OS.iocb[0].aux2 = XEP_WRITEBYTE;
+	OS.iocb[0].command = 20;
+	cio(0);
 }
 
 void setXepRowPtr(unsigned char y, unsigned char val) {
@@ -204,7 +199,6 @@ void drawClearScreen(void)
 		cio(0);
 		fillFlag = isXep80Internal()? 0x40: (isIntl()? 0x20: 0x00);
 		for (y = 0;y<XEPLINES;y++)setXepRowPtr(y, fillFlag| y);
-		//drawXEPEol();
 	} else {
 		OS.dspflg = 0;
 		OS.iocb[0].buffer = &clearScreen;
@@ -401,6 +395,9 @@ void drawInsertChar(unsigned char x, unsigned char y)
 {
 	static unsigned char ch = CH_INSCHR;
 	flushBuffer();
+	if (isXep80()) {
+		drawXEPCharAt(CH_EOL, 79, y);
+	}
 	OS.dspflg = 0;
 	OS.rowcrs = y;
 	OS.colcrs = OS.lmargn + x;
@@ -414,6 +411,10 @@ void drawDeleteChar(unsigned char x, unsigned char y)
 {
 	static unsigned char ch = CH_DELCHR;
 	flushBuffer();
+	if (isXep80()) {
+		drawXEPCharAt(' ', 80, y);
+		drawXEPCharAt(CH_EOL, 81, y);
+	}
 	OS.dspflg = 0;
 	OS.rowcrs = y;
 	OS.colcrs = OS.lmargn + x;
