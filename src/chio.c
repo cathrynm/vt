@@ -56,13 +56,16 @@ unsigned char setXepCharSet(unsigned char which)
 	return err;
 }
 
-
+unsigned char isIntl(void)
+{
+	return (chio.chbas == 204);
+}
 
 unsigned char closeChio(void)
 {
 	unsigned char err = ERR_NONE;
 	if (chio.xep80) {
-		setXepCharSet((chio.chbas == 204)? XEPCH_ATINT: XEPCH_ATASCII); 
+		setXepCharSet(isIntl()? XEPCH_ATINT: XEPCH_ATASCII); 
 	}
 	if (chio.fullAscii) {
 		OS.chbas = chio.chbas;
@@ -76,7 +79,7 @@ unsigned char closeChio(void)
 // Note, only need to check ones that go past 16 bits here.  These all get processed as drawable, not controls.
 void convertLongToVisibleChar(unsigned long c, unsigned char *ch, unsigned char *attrib)
 {
-	if (chio.chbas == 204) { // international 
+	if (isIntl()) { // international 
 		switch(c) {
 			case 0x1F8B0:
 				*ch = 0x7d;
@@ -118,7 +121,7 @@ void convertAsciiToVisibleChar(unsigned char *ch, unsigned char *attrib)
 void convertShortToVisibleChar(unsigned short c, unsigned char *ch, unsigned char *attrib)
 {
 	*attrib = 0;
-	if (chio.chbas == 204) { // international 
+	if (isIntl()) { // international 
 		switch(c) {
 			case 0x00a0:
 				*ch = ' ';

@@ -13,6 +13,7 @@ unsigned char handleInput(void);
 unsigned char closeChio(void);
 unsigned char isXep80(void);
 unsigned char isXep80Internal(void);
+unsigned char isIntl(void);
 
 extern unsigned char *eColon;
 

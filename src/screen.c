@@ -109,6 +109,7 @@ void screenRestore(void)
 #define XEP_SETCURSORHPOSHI 0x50
 #define XEP_SETCURSORVPOS	0x80
 #define XEP_FILLSPACE		0xc5
+#define XEP_FILLEOL			0xc6
 #define XEP_WRITEBYTE   	0xe3
 #define XEP_SETEXTRABYTE	0xe4
 #define XEP_WRITEINTERNALBYTE 0xe5
@@ -176,7 +177,7 @@ void drawXEPEol(void)
 	}
 }
 
-void setRowPtr(unsigned char y, unsigned char val) {
+void setXepRowPtr(unsigned char y, unsigned char val) {
 	setXEPExtraByte(y + 0x20);
 	setXEPLastChar(val);
 	OS.iocb[0].buffer = eColon;
@@ -190,17 +191,19 @@ void setRowPtr(unsigned char y, unsigned char val) {
 
 void drawClearScreen(void)
 {
+	unsigned char fillFlag;
 	unsigned char y;
 	static const unsigned char clearScreen = CH_CLR;
 	flushBuffer();
-	if (isXep80Internal()) {
+	if (isXep80()) {
 		OS.iocb[0].buffer = eColon;
 		OS.iocb[0].buflen = strlen(eColon);
 		OS.iocb[0].aux1 = 12;
-		OS.iocb[0].aux2 = XEP_FILLSPACE;
+		OS.iocb[0].aux2 = isXep80Internal()? XEP_FILLSPACE:XEP_FILLEOL;
 		OS.iocb[0].command = 20;
 		cio(0);
-		for (y = 0;y<XEPLINES;y++)setRowPtr(y, 0x40 | y);
+		fillFlag = isXep80Internal()? 0x40: (isIntl()? 0x20: 0x00);
+		for (y = 0;y<XEPLINES;y++)setXepRowPtr(y, fillFlag| y);
 		//drawXEPEol();
 	} else {
 		OS.dspflg = 0;
@@ -314,6 +317,13 @@ void drawClearLine(unsigned char y)
 	OS.crsinh = 1;
 	OS.rowcrs = y;
 	OS.colcrs = OS.lmargn;
+	if (isXep80()) {
+		OS.iocb[0].buffer = screen.clearBuffer;
+		OS.iocb[0].buflen =  screen.screenWidth - OS.lmargn;
+		OS.iocb[0].command = IOCB_PUTCHR;
+		cio(0);
+		return;
+	}
 	OS.dspflg = 0;
 	OS.iocb[0].buffer = &chD;
 	OS.iocb[0].buflen =  1;
@@ -330,8 +340,16 @@ void drawClearLine(unsigned char y)
 
 void drawInsertLine(unsigned char y, unsigned char yBottom)
 {
+	unsigned char yp, saveLine;
 	static unsigned char ch = CH_INSLINE, chD = CH_DELLINE;
 	flushBuffer();
+	if (isXep80()) {
+		drawClearLine(yBottom);
+		saveLine = screen.xepLines[yBottom];
+		for (yp = yBottom;yp > y;yp--) setXepRowPtr(yp, screen.xepLines[yp-1]);
+		setXepRowPtr(y, saveLine);
+		return;
+	}
 	OS.dspflg = 0;
 	OS.crsinh = 1;
 	OS.colcrs = OS.lmargn;
@@ -352,8 +370,16 @@ void drawInsertLine(unsigned char y, unsigned char yBottom)
 
 void drawDeleteLine(unsigned char y, unsigned char yBottom)
 {
+	unsigned char saveLine, yp;
 	static unsigned char ch = CH_DELLINE, chI = CH_INSLINE;
 	flushBuffer();
+	if (isXep80()) {
+		drawClearLine(y);
+		saveLine = screen.xepLines[y];
+		for (yp = y;yp +1 <= yBottom;yp++) setXepRowPtr(yp, screen.xepLines[yp+1]);
+		setXepRowPtr(yBottom, saveLine);
+		return;
+	}
 	OS.crsinh = 1;
 	OS.dspflg = 0;
 	OS.rowcrs = y;
