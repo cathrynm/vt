@@ -1,8 +1,10 @@
 
 #include "main.h"
 
+#define XEPLINES 25
 #define SCREENLINES 24
 #define SCREENCOLUMNS 255
+#define XEPRMARGIN 82
 
 typedef struct screenDataStruct screenStruct;
 struct screenDataStruct {
@@ -12,6 +14,7 @@ struct screenDataStruct {
 	unsigned char clearBuffer[SCREENCOLUMNS];
 	unsigned char buffer[SCREENCOLUMNS];
 	unsigned short lineTab[SCREENLINES];
+	unsigned char xepLines[XEPLINES];
 };
 
 screenStruct screen;
@@ -88,7 +91,7 @@ void initScreen(void)
 	screen.bufferX = 255;
 	screen.bufferY = 0;
 	if (isXep80()) {
-		OS.rmargn = 133;
+		OS.rmargn = XEPRMARGIN;
 	//	setBurstMode(1); // Just keep the thing in Burst mode all the time.
 	}
 	screen.directDraw = directDrawTest();
@@ -102,15 +105,111 @@ void screenRestore(void)
 	if (isXep80()) setBurstMode(0);
 }
 
-void drawClearScreen(void)
-{
-	static const unsigned char clearScreen = CH_CLR;
-	OS.dspflg = 0;
-	OS.iocb[0].buffer = &clearScreen;
+#define XEP_SETCURSORHPOS 0
+#define XEP_SETCURSORHPOSHI 0x50
+#define XEP_SETCURSORVPOS	0x80
+#define XEP_FILLSPACE		0xc5
+#define XEP_WRITEBYTE   	0xe3
+#define XEP_SETEXTRABYTE	0xe4
+#define XEP_WRITEINTERNALBYTE 0xe5
+
+
+void setXEPLastChar(unsigned char c)
+{ // 80 = cr, 81 = place to write lastchar, 82 = rmargin 
+	OS.dspflg = 1;
+	OS.rowcrs = 0;
+	OS.colcrs = 81; // EOL in 80, Space in 81
+	OS.iocb[0].buffer = &c;
 	OS.iocb[0].buflen = 1;
 	OS.iocb[0].command = IOCB_PUTCHR;
 	cio(0);
-	OS.dspflg = 1; // Just presume draw
+}
+
+void setXEPExtraByte(unsigned char c)
+{
+	setXEPLastChar(c);
+	OS.iocb[0].buffer = eColon;
+	OS.iocb[0].buflen = 2;
+	OS.iocb[0].aux1 = 12;
+	OS.iocb[0].aux2 = XEP_SETEXTRABYTE;
+	OS.iocb[0].command = 20;
+	cio(0);
+}
+
+void setXEPHPos(unsigned char hpos) {
+	OS.iocb[0].buffer = eColon;
+	OS.iocb[0].buflen = 2;
+	OS.iocb[0].aux1 = 12;
+	OS.iocb[0].aux2 = XEP_SETCURSORHPOS + (hpos & 0xf); // Set to low 4 bits
+	OS.iocb[0].command = 20;
+	cio(0);
+	OS.iocb[0].aux1 = 12;
+	OS.iocb[0].aux2 = XEP_SETCURSORHPOSHI + (hpos >> 4);
+	OS.iocb[0].command = 20;
+	cio(0);
+}
+
+void setXEPYPos(unsigned char y) {
+	OS.iocb[0].buffer = eColon;
+	OS.iocb[0].buflen = 2;
+	OS.iocb[0].aux1 = 12;
+	OS.iocb[0].aux2 = XEP_SETCURSORVPOS + y;
+	OS.iocb[0].command = 20;
+	cio(0);
+}
+
+
+// Put CRs at the end of lines.
+void drawXEPEol(void)
+{
+	unsigned char y;
+	setXEPLastChar(CH_EOL);
+	setXEPHPos(80);
+	for (y = 0;y<XEPLINES;y++) {
+		setXEPYPos(y);
+		OS.iocb[0].buffer = eColon;
+		OS.iocb[0].buflen = 2;
+		OS.iocb[0].aux1 = 12;
+		OS.iocb[0].aux2 = XEP_WRITEBYTE;
+		OS.iocb[0].command = 20;
+		cio(0);
+	}
+}
+
+void setRowPtr(unsigned char y, unsigned char val) {
+	setXEPExtraByte(y + 0x20);
+	setXEPLastChar(val);
+	OS.iocb[0].buffer = eColon;
+	OS.iocb[0].buflen = 2;
+	OS.iocb[0].aux1 = 12;
+	OS.iocb[0].aux2 = XEP_WRITEINTERNALBYTE;
+	OS.iocb[0].command = 20;
+	cio(0);
+	screen.xepLines[y] = val;
+}
+
+void drawClearScreen(void)
+{
+	unsigned char y;
+	static const unsigned char clearScreen = CH_CLR;
+	flushBuffer();
+	if (isXep80Internal()) {
+		OS.iocb[0].buffer = eColon;
+		OS.iocb[0].buflen = strlen(eColon);
+		OS.iocb[0].aux1 = 12;
+		OS.iocb[0].aux2 = XEP_FILLSPACE;
+		OS.iocb[0].command = 20;
+		cio(0);
+		for (y = 0;y<XEPLINES;y++)setRowPtr(y, 0x40 | y);
+		//drawXEPEol();
+	} else {
+		OS.dspflg = 0;
+		OS.iocb[0].buffer = &clearScreen;
+		OS.iocb[0].buflen = 1;
+		OS.iocb[0].command = IOCB_PUTCHR;
+		cio(0);
+	}
+	OS.dspflg = 1;
 	OS.rowcrs = 0;
 	OS.colcrs = 0;
 }
@@ -296,16 +395,6 @@ void drawDeleteChar(unsigned char x, unsigned char y)
 	OS.iocb[0].buflen =  1;
 	OS.iocb[0].command = IOCB_PUTCHR;
 	cio(0);
-}
-
-void drawScrollScreenDown(unsigned char yTop, unsigned char yBottom)
-{
-	drawInsertLine(yTop, yBottom);
-}
-
-void drawScrollScreen(unsigned char yTop, unsigned char yBottom)
-{
-	drawDeleteLine(yTop, yBottom);
 }
 
 void drawBell(void)

@@ -161,14 +161,14 @@ void fixCursor(void)
 void scrollDown(unsigned char lines)
 {
 	for(;lines--;) {
-		drawScrollScreenDown(vt.tMargin, vt.bMargin);
+		drawInsertLine(vt.tMargin, vt.bMargin);
 	}
 }
 
 void scrollUp(unsigned char lines)
 {
 	for(;lines--;) {
-		drawScrollScreen(vt.tMargin, vt.bMargin);
+		drawDeleteLine(vt.tMargin, vt.bMargin);
 	}
 }
 
@@ -879,14 +879,16 @@ void displayUtf8Char(unsigned char c, unsigned char attribute)
 
 void debugVt(unsigned char c)
 {
-	/*
+#if 1
+	c = c;
+#else
 	static unsigned char debugBuffer[256];
 	static unsigned char debugIndex = 0;
 	OS.stack[0]  = (unsigned char) debugBuffer;
 	OS.stack[1] = (unsigned char) (((unsigned short) debugBuffer) >> 8);
 	OS.stack[2] = debugIndex;
 	debugBuffer[debugIndex++] = c;
-	*/
+#endif
 }
 
 void processChar(unsigned char c) {

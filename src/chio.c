@@ -1,8 +1,9 @@
 
 #include "main.h"
+#define XEPCH_ATASCII 0xd4
+#define XEPCH_ATINT 0xd5
+#define XEPCH_INTERN 0xd6
 
-#define CHARSET_ATARI 0
-#define CHARSET_XEPINTERNAL 1 // This has {}~` in it, but acts pretty quirky.
 
 typedef struct chioDataStruct chioStruct;
 struct chioDataStruct {
@@ -10,18 +11,49 @@ struct chioDataStruct {
 	unsigned char utfIndex;
 	unsigned short utfWord;
 	unsigned long utfLong; // Super slow on 6502, but these are rare, so whatever.
-	unsigned char charSet;
 	unsigned char osType;
 	unsigned char *keyTab;
 	unsigned char chbas; // Original character set coming in here.
 	unsigned char fullAscii; // {}~` characters are copied in.
 	unsigned char xep80;
+	unsigned char xepCharset;
 };
 
 chioStruct chio;
+unsigned char *eColon = "E:";
 
 unsigned char isXep80(void) {
 	return chio.xep80;
+}
+
+unsigned char isXep80Internal(void) {
+	return chio.xepCharset == XEPCH_INTERN;
+}
+
+void drawChar(unsigned char ch)
+{
+	OS.iocb[0].buffer = &ch;
+	OS.iocb[0].buflen = 1;
+	OS.iocb[0].command = IOCB_PUTCHR;
+	cio(0);
+}
+
+
+unsigned char setXepCharSet(unsigned char which)
+{
+	unsigned char err = ERR_NONE;
+	if (!chio.xep80 || (which == chio.xepCharset))return err;
+	OS.iocb[0].buffer = eColon;
+	OS.iocb[0].buflen = strlen(eColon);
+	OS.iocb[0].aux1 = 12;
+	OS.iocb[0].aux2 = which;
+	OS.iocb[0].command = 20;
+	cio(0);
+	iocbErrUpdate(0, &err);
+	if (err == ERR_NONE) {
+		chio.xepCharset = which;
+	}
+	return err;
 }
 
 
@@ -29,6 +61,9 @@ unsigned char isXep80(void) {
 unsigned char closeChio(void)
 {
 	unsigned char err = ERR_NONE;
+	if (chio.xep80) {
+		setXepCharSet((chio.chbas == 204)? XEPCH_ATINT: XEPCH_ATASCII); 
+	}
 	if (chio.fullAscii) {
 		OS.chbas = chio.chbas;
 	}
@@ -634,6 +669,7 @@ unsigned char handleInput(void)
 	return err;
 }
 
+
 static const unsigned char lCurly[8] =  {0x07, 0x18, 0x18, 0x70, 0x18, 0x18, 0x07, 0x00};
 static const unsigned char rCurly[8] =  {0x70, 0x18, 0x18, 0x0e, 0x18, 0x18, 0x70, 0x00};
 static const unsigned char tilda[8] =   {0x00, 0x3d, 0x6e, 0x00, 0x00, 0x00, 0x00, 0x00};
@@ -663,17 +699,10 @@ void initAscii(unsigned char fontBase) {
 	chio.fullAscii = 1;
 }
 
-void drawChar(unsigned char ch)
-{
-	OS.iocb[0].buffer = &ch;
-	OS.iocb[0].buflen = 1;
-	OS.iocb[0].command = IOCB_PUTCHR;
-	cio(0);
-}
+
 
 unsigned char XEP80Test(void)
 {
-	static unsigned char *eColon = "E:";
 	unsigned char err;
 	if (OS.rmargn > 39) {
 		err = ERR_NONE;
@@ -702,10 +731,12 @@ unsigned char initChio(void) // Don't use malloc from here.
 		startAddress -= 0x400;
 		initAscii(startAddress >> 8);
 	}
+
 	if ((unsigned short) OS.memlo < startAddress)
 		_heapadd(OS.memlo, startAddress - (unsigned short) OS.memlo); // recover memory below font and above lomem
-
-	chio.charSet = CHARSET_ATARI;
+	if (chio.xep80) {
+		setXepCharSet(XEPCH_INTERN);
+	}
 	chio.utfType  = 0;
 	chio.osType = get_ostype() & AT_OS_TYPE_MAIN;
 	if (chio.osType >= 2) chio.keyTab = OS.keydef;
