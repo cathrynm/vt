@@ -52,6 +52,7 @@ unsigned char setXepCharSet(unsigned char which)
 	iocbErrUpdate(0, &err);
 	if (err == ERR_NONE) {
 		chio.xepCharset = which;
+		chio.fullAscii = (which == XEPCH_INTERN); 
 	}
 	return err;
 }
@@ -66,6 +67,15 @@ unsigned char closeChio(void)
 	unsigned char err = ERR_NONE;
 	if (chio.xep80) {
 		setXepCharSet(isIntl()? XEPCH_ATINT: XEPCH_ATASCII); 
+		drawClearScreen();
+		OS.iocb[0].buffer = eColon;
+		OS.iocb[0].buflen = strlen(eColon);
+		OS.iocb[0].aux1 = 12;
+		OS.iocb[0].aux2 = XEP_RESET;
+		OS.iocb[0].command = 20;
+		cio(0);
+
+
 	}
 	if (chio.fullAscii) {
 		OS.chbas = chio.chbas;
@@ -634,9 +644,15 @@ unsigned char handleInput(void)
 		case CH_DEL:
 			sendResponse(&bs, 1);
 			break;
-		case CH_DELCHR:
-			sendResponse(&del, 1);
+		case CH_INSCHR:{
+			sendResponse("\033[@", 3);
 			break;
+		}
+		case CH_DELCHR:{
+			//sendResponse(&del, 1);
+			sendResponse("\033[P", 3);
+			break;
+		}
 		case ' ':
 			if ((shift & 0xc0) == 0x80) {
 				sendResponse(&null, 1);

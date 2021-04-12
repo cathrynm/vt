@@ -1,6 +1,16 @@
 #ifndef SCREEN_H
 #define SCREEN_H 1
 
+#define XEP_SETCURSORHPOS 0
+#define XEP_SETCURSORHPOSHI 0x50
+#define XEP_SETCURSORVPOS	0x80
+#define XEP_RESET 0xc2
+#define XEP_FILLSPACE		0xc5
+#define XEP_FILLEOL			0xc6
+#define XEP_WRITEBYTE   	0xe3
+#define XEP_SETEXTRABYTE	0xe4
+#define XEP_WRITEINTERNALBYTE 0xe5
+
 void initScreen(void);
 void cursorUpdate(unsigned char x, unsigned char y);
 void drawCharAt(unsigned char c, unsigned char attribute, unsigned char x, unsigned char y);

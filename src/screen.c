@@ -4,7 +4,7 @@
 #define XEPLINES 25
 #define SCREENLINES 24
 #define SCREENCOLUMNS 255
-#define XEPRMARGIN 82
+#define XEPRMARGIN 81 // Two extra for delete character. 
 
 typedef struct screenDataStruct screenStruct;
 struct screenDataStruct {
@@ -53,6 +53,7 @@ void setBurstMode(unsigned char on)
 	OS.iocb[0].buffer = NULL;
 	OS.iocb[0].buflen = 0;
 	OS.iocb[0].command = 0x15;
+	OS.iocb[0].aux1 = 0xc;
 	OS.iocb[0].aux2 = on;
 	cio(0);
 }
@@ -85,14 +86,13 @@ void initScreen(void)
 {
 	unsigned char n;
 	for (n = 0;n < sizeof(screen.clearBuffer);n++)screen.clearBuffer[n] = ' ';
-	screen.clearBuffer[sizeof(screen.clearBuffer)-1] = CH_ENTER;
 	screen.screenWidth = OS.rmargn + 1; 
 	screen.bufferLen = 0;
 	screen.bufferX = 255;
 	screen.bufferY = 0;
 	if (isXep80()) {
 		OS.rmargn = XEPRMARGIN;
-	//	setBurstMode(1); // Just keep the thing in Burst mode all the time.
+		screen.screenWidth = XEPRMARGIN - 1;
 	}
 	screen.directDraw = directDrawTest();
 	drawClearScreen();
@@ -105,21 +105,44 @@ void screenRestore(void)
 	if (isXep80()) setBurstMode(0);
 }
 
-#define XEP_SETCURSORHPOS 0
-#define XEP_SETCURSORHPOSHI 0x50
-#define XEP_SETCURSORVPOS	0x80
-#define XEP_FILLSPACE		0xc5
-#define XEP_FILLEOL			0xc6
-#define XEP_WRITEBYTE   	0xe3
-#define XEP_SETEXTRABYTE	0xe4
-#define XEP_WRITEINTERNALBYTE 0xe5
+void setXEPHPos(unsigned char hpos) {
+	if (hpos < 80) {
+		OS.iocb[0].buffer = eColon;
+		OS.iocb[0].buflen = 2;
+		OS.iocb[0].aux1 = 12;
+		OS.iocb[0].aux2 = XEP_SETCURSORHPOS | hpos; // Set to low 4 bits
+		OS.iocb[0].command = 20;
+		cio(0);
+	} else {
+		OS.iocb[0].buffer = eColon;
+		OS.iocb[0].buflen = 2;
+		OS.iocb[0].aux1 = 12;
+		OS.iocb[0].aux2 = XEP_SETCURSORHPOS | (hpos & 0xf); // Set to low 4 bits
+		OS.iocb[0].command = 20;
+		cio(0);
+		OS.iocb[0].buffer = eColon;
+		OS.iocb[0].buflen = 2;
+		OS.iocb[0].aux1 = 12;
+		OS.iocb[0].aux2 = XEP_SETCURSORHPOSHI + (hpos >> 4);
+		OS.iocb[0].command = 20;
+		cio(0);
+	}
+}
 
+void setXEPYPos(unsigned char y) {
+	OS.iocb[0].buffer = eColon;
+	OS.iocb[0].buflen = 2;
+	OS.iocb[0].aux1 = 12;
+	OS.iocb[0].aux2 = XEP_SETCURSORVPOS + y;
+	OS.iocb[0].command = 20;
+	cio(0);
+}
 
 void setXEPLastChar(unsigned char c)
-{ // 80 = cr, 81 = place to write lastchar, 82 = rmargin 
+{ // 80 = cr
 	OS.dspflg = 1;
-	OS.rowcrs = 0;
-	OS.colcrs = 81; // EOL in 80, Space in 81
+	OS.rowcrs = XEPLINES-1;
+	OS.colcrs = 80;
 	OS.iocb[0].buffer = &c;
 	OS.iocb[0].buflen = 1;
 	OS.iocb[0].command = IOCB_PUTCHR;
@@ -137,27 +160,6 @@ void setXEPExtraByte(unsigned char c)
 	cio(0);
 }
 
-void setXEPHPos(unsigned char hpos) {
-	OS.iocb[0].buffer = eColon;
-	OS.iocb[0].buflen = 2;
-	OS.iocb[0].aux1 = 12;
-	OS.iocb[0].aux2 = XEP_SETCURSORHPOS + (hpos & 0xf); // Set to low 4 bits
-	OS.iocb[0].command = 20;
-	cio(0);
-	OS.iocb[0].aux1 = 12;
-	OS.iocb[0].aux2 = XEP_SETCURSORHPOSHI + (hpos >> 4);
-	OS.iocb[0].command = 20;
-	cio(0);
-}
-
-void setXEPYPos(unsigned char y) {
-	OS.iocb[0].buffer = eColon;
-	OS.iocb[0].buflen = 2;
-	OS.iocb[0].aux1 = 12;
-	OS.iocb[0].aux2 = XEP_SETCURSORVPOS + y;
-	OS.iocb[0].command = 20;
-	cio(0);
-}
 
 void drawXEPCharAt(unsigned char c, unsigned char x, unsigned char y)
 {
@@ -170,6 +172,8 @@ void drawXEPCharAt(unsigned char c, unsigned char x, unsigned char y)
 	OS.iocb[0].aux2 = XEP_WRITEBYTE;
 	OS.iocb[0].command = 20;
 	cio(0);
+	if (x != OS.colcrs) setXEPHPos(OS.colcrs);
+	if (y != OS.rowcrs) setXEPYPos(OS.rowcrs);
 }
 
 void setXepRowPtr(unsigned char y, unsigned char val) {
@@ -199,6 +203,10 @@ void drawClearScreen(void)
 		cio(0);
 		fillFlag = isXep80Internal()? 0x40: (isIntl()? 0x20: 0x00);
 		for (y = 0;y<XEPLINES;y++)setXepRowPtr(y, fillFlag| y);
+		for (y = 0;y< 24;y++) {
+			drawXEPCharAt(CH_EOL, XEPRMARGIN-1, y);
+			drawXEPCharAt(CH_EOL, XEPRMARGIN, y);
+		}
 	} else {
 		OS.dspflg = 0;
 		OS.iocb[0].buffer = &clearScreen;
@@ -243,10 +251,33 @@ void cursorUpdate(unsigned char x, unsigned char y)
 
 void drawCharsAt(unsigned char *buffer, unsigned char bufferLen, unsigned char x, unsigned char y)
 {
+	unsigned char burst;
 	unsigned char logMapTouch = 0;
 	if ((x >= screen.screenWidth) || !bufferLen)return;
 	if (screen.directDraw) {
 		writeScreen(buffer, bufferLen, x, y);
+		return;
+	}
+	OS.rowcrs = y;
+	OS.colcrs = x;
+	if (isXep80()) {
+		if (x + bufferLen >= screen.screenWidth)bufferLen = screen.screenWidth - x;
+		if (bufferLen > 1) {
+			setBurstMode(1);
+			burst = 1;
+		} else burst = 0;
+		OS.iocb[0].buffer = buffer;
+		OS.iocb[0].buflen = bufferLen-burst;
+		OS.iocb[0].command = IOCB_PUTCHR;
+		cio(0);
+		OS.colcrs = x + bufferLen-burst;
+		if (burst) {
+			setBurstMode(0);
+			OS.iocb[0].buffer = buffer + bufferLen - 1;
+			OS.iocb[0].buflen = 1;
+			OS.iocb[0].command = IOCB_PUTCHR;
+			cio(0);
+		}
 		return;
 	}
 	if (x + bufferLen >= screen.screenWidth) {
@@ -258,8 +289,7 @@ void drawCharsAt(unsigned char *buffer, unsigned char bufferLen, unsigned char x
 		logMapTouch = y + 1;
 		OS.logmap[0] = OS.logmap[1] = OS.logmap[2] = OS.logmap[3] = 0; // HACK, prevents atari from wrapping
 	}
-	OS.rowcrs = y;
-	OS.colcrs = x;
+
 	OS.iocb[0].buffer = buffer;
 	OS.iocb[0].buflen = bufferLen;
 	OS.iocb[0].command = IOCB_PUTCHR;
@@ -338,10 +368,12 @@ void drawInsertLine(unsigned char y, unsigned char yBottom)
 	static unsigned char ch = CH_INSLINE, chD = CH_DELLINE;
 	flushBuffer();
 	if (isXep80()) {
+		setBurstMode(1);
 		drawClearLine(yBottom);
 		saveLine = screen.xepLines[yBottom];
 		for (yp = yBottom;yp > y;yp--) setXepRowPtr(yp, screen.xepLines[yp-1]);
 		setXepRowPtr(y, saveLine);
+		setBurstMode(0);
 		return;
 	}
 	OS.dspflg = 0;
@@ -368,10 +400,12 @@ void drawDeleteLine(unsigned char y, unsigned char yBottom)
 	static unsigned char ch = CH_DELLINE, chI = CH_INSLINE;
 	flushBuffer();
 	if (isXep80()) {
+		setBurstMode(1);
 		drawClearLine(y);
 		saveLine = screen.xepLines[y];
 		for (yp = y;yp +1 <= yBottom;yp++) setXepRowPtr(yp, screen.xepLines[yp+1]);
 		setXepRowPtr(yBottom, saveLine);
+		setBurstMode(0);
 		return;
 	}
 	OS.crsinh = 1;
@@ -394,9 +428,11 @@ void drawDeleteLine(unsigned char y, unsigned char yBottom)
 void drawInsertChar(unsigned char x, unsigned char y)
 {
 	static unsigned char ch = CH_INSCHR;
+		if (x >= screen.screenWidth)return;
 	flushBuffer();
 	if (isXep80()) {
-		drawXEPCharAt(CH_EOL, 79, y);
+		drawXEPCharAt(CH_EOL, XEPRMARGIN-1, y);
+		drawXEPCharAt(CH_EOL, XEPRMARGIN, y);
 	}
 	OS.dspflg = 0;
 	OS.rowcrs = y;
@@ -411,9 +447,10 @@ void drawDeleteChar(unsigned char x, unsigned char y)
 {
 	static unsigned char ch = CH_DELCHR;
 	flushBuffer();
+	if (x >= screen.screenWidth)return;
 	if (isXep80()) {
-		drawXEPCharAt(' ', 80, y);
-		drawXEPCharAt(CH_EOL, 81, y);
+		drawXEPCharAt(' ', XEPRMARGIN-1, y);
+		drawXEPCharAt(CH_EOL, XEPRMARGIN, y);
 	}
 	OS.dspflg = 0;
 	OS.rowcrs = y;
