@@ -357,6 +357,7 @@ void drawInsertLine(unsigned char y, unsigned char yBottom)
 	flushBuffer();
 	if (isXep80()) {
 		drawClearLine(yBottom);
+		flushBuffer();
 		setBurstMode(1);
 		saveLine = screen.xepLines[yBottom];
 		for (yp = yBottom;yp > y;yp--) {
@@ -394,6 +395,7 @@ void drawDeleteLine(unsigned char y, unsigned char yBottom)
 	flushBuffer();
 	if (isXep80()) {
 		drawClearLine(y);
+		flushBuffer();
 		setBurstMode(1);
 		saveLine = screen.xepLines[y];
 		for (yp = y;yp +1 <= yBottom;yp++) {
