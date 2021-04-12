@@ -11,6 +11,7 @@ struct screenDataStruct {
 	unsigned char screenWidth;
 	unsigned char lastCharX, lastCharY, bufferLen, bufferX, bufferY;
 	unsigned char directDraw;
+	unsigned char burst, xepX, xepY;
 	unsigned char clearBuffer[SCREENCOLUMNS];
 	unsigned char buffer[SCREENCOLUMNS];
 	unsigned short lineTab[SCREENLINES];
@@ -51,12 +52,14 @@ unsigned char iocbErrUpdate(unsigned char iocb, unsigned char *oldErr)
 
 void setBurstMode(unsigned char on)
 {
+	if (screen.burst == on)return;
 	OS.iocb[0].buffer = NULL;
 	OS.iocb[0].buflen = 0;
 	OS.iocb[0].command = 0x15;
 	OS.iocb[0].aux1 = 0xc;
 	OS.iocb[0].aux2 = on;
 	cio(0);
+	screen.burst = on;
 }
 
 
@@ -90,6 +93,7 @@ void initScreen(void)
 	screen.bufferLen = 0;
 	screen.bufferX = 255;
 	screen.bufferY = 0;
+	screen.burst = 0;
 	if (isXep80()) {
 		OS.rmargn = XEPRMARGIN;
 		screen.screenWidth = XEPRMARGIN - 1;
@@ -104,7 +108,7 @@ void screenRestore(void)
 	if (isXep80()) setBurstMode(0);
 }
 
-void setXEPHPos(unsigned char hpos) {
+void setXEPXPos(unsigned char hpos) {
 	if (hpos < 80) {
 		OS.iocb[0].buffer = eColon;
 		OS.iocb[0].buflen = 2;
@@ -126,6 +130,7 @@ void setXEPHPos(unsigned char hpos) {
 		OS.iocb[0].command = 20;
 		cio(0);
 	}
+	screen.xepX = hpos;
 }
 
 void setXEPYPos(unsigned char y) {
@@ -135,6 +140,7 @@ void setXEPYPos(unsigned char y) {
 	OS.iocb[0].aux2 = XEP_SETCURSORVPOS + y;
 	OS.iocb[0].command = 20;
 	cio(0);
+	screen.xepY = y;
 }
 
 void setXEPLastChar(unsigned char c)
@@ -163,7 +169,7 @@ void setXEPExtraByte(unsigned char c)
 void drawXEPCharAt(unsigned char c, unsigned char x, unsigned char y)
 {
 	setXEPLastChar(c);
-	setXEPHPos(x);
+	setXEPXPos(x);
 	setXEPYPos(y);
 	OS.iocb[0].buffer = eColon;
 	OS.iocb[0].buflen = 2;
@@ -171,7 +177,7 @@ void drawXEPCharAt(unsigned char c, unsigned char x, unsigned char y)
 	OS.iocb[0].aux2 = XEP_WRITEBYTE;
 	OS.iocb[0].command = 20;
 	cio(0);
-	if (x != OS.colcrs) setXEPHPos(OS.colcrs);
+	if (x != OS.colcrs) setXEPXPos(OS.colcrs);
 	if (y != OS.rowcrs) setXEPYPos(OS.rowcrs);
 }
 
@@ -261,7 +267,7 @@ void drawCharsAt(unsigned char *buffer, unsigned char bufferLen, unsigned char x
 		OS.iocb[0].buflen = bufferLen;
 		OS.iocb[0].command = IOCB_PUTCHR;
 		cio(0);
-		setXEPHPos(OS.colcrs); // Key to burst mode.  Need to put cursor back to OS.colcrs
+		setXEPXPos(OS.colcrs); // Key to burst mode.  Need to put cursor back to OS.colcrs
 		setBurstMode(0);
 		return;
 	}
@@ -351,6 +357,7 @@ void drawInsertLine(unsigned char y, unsigned char yBottom)
 	flushBuffer();
 	if (isXep80()) {
 		drawClearLine(yBottom);
+		setBurstMode(1);
 		saveLine = screen.xepLines[yBottom];
 		for (yp = yBottom;yp > y;yp--) {
 			setXepRowPtr(yp, screen.xepLines[yp-1]);
@@ -358,6 +365,7 @@ void drawInsertLine(unsigned char y, unsigned char yBottom)
 		}
 		setXepRowPtr(y, saveLine);
 		screen.lineLength[y] = 0;
+		setBurstMode(0);
 		return;
 	}
 	OS.dspflg = 0;
@@ -386,6 +394,7 @@ void drawDeleteLine(unsigned char y, unsigned char yBottom)
 	flushBuffer();
 	if (isXep80()) {
 		drawClearLine(y);
+		setBurstMode(1);
 		saveLine = screen.xepLines[y];
 		for (yp = y;yp +1 <= yBottom;yp++) {
 			setXepRowPtr(yp, screen.xepLines[yp+1]);
@@ -393,6 +402,7 @@ void drawDeleteLine(unsigned char y, unsigned char yBottom)
 		}
 		setXepRowPtr(yBottom, saveLine);
 		screen.lineLength[yBottom] = 0;
+		setBurstMode(0);
 		return;
 	}
 	OS.crsinh = 1;
