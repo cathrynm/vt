@@ -202,10 +202,6 @@ void drawClearScreen(void)
 		cio(0);
 		fillFlag = isXep80Internal()? 0x40: (isIntl()? 0x20: 0x00);
 		for (y = 0;y<XEPLINES;y++)setXepRowPtr(y, fillFlag| y);
-		for (y = 0;y< 24;y++) {
-			drawXEPCharAt(CH_EOL, XEPRMARGIN-1, y);
-			drawXEPCharAt(CH_EOL, XEPRMARGIN, y);
-		}
 	} else {
 		OS.dspflg = 0;
 		OS.iocb[0].buffer = &clearScreen;
@@ -213,6 +209,7 @@ void drawClearScreen(void)
 		OS.iocb[0].command = IOCB_PUTCHR;
 		cio(0);
 	}
+	for (y = 0;y< 24;y++) screen.lineLength[y] = 0;
 	OS.rowcrs = 0;
 	OS.colcrs = 0;
 }
@@ -290,6 +287,8 @@ void flushBuffer(void)
 {
 	if (!screen.bufferLen)return;
 	drawCharsAt(screen.buffer, screen.bufferLen, OS.lmargn + screen.bufferX - screen.bufferLen, screen.bufferY);
+	if (screen.bufferX > screen.lineLength[screen.bufferY])
+		screen.lineLength[screen.bufferY] = screen.bufferX;
 	screen.bufferLen = 0;
 }
 
@@ -307,9 +306,17 @@ void drawCharAt(unsigned char c, unsigned char attribute, unsigned char x, unsig
 
 void drawClearCharsAt(unsigned char len, unsigned char x, unsigned char y)
 {
+	unsigned char oldLen;
 	if ((y >= SCREENLINES) || (x >= screen.screenWidth))return;
+	oldLen = screen.lineLength[y];
+	if (len > screen.screenWidth - x) {
+		len = screen.screenWidth - x;
+		if (x < screen.lineLength[y])screen.lineLength[y] = x;
+	}
+	if (x >= oldLen)return;
+	if (len > oldLen - x) len = oldLen - x;
 	OS.crsinh = 1;
-	drawCharsAt(screen.clearBuffer, len > screen.screenWidth - x? screen.screenWidth - x: len, x + OS.lmargn, y);
+	drawCharsAt(screen.clearBuffer, len, x + OS.lmargn, y);
 }
 
 void drawClearLine(unsigned char y)
@@ -332,6 +339,7 @@ void drawClearLine(unsigned char y)
 	OS.iocb[0].buflen =  1;
 	OS.iocb[0].command = IOCB_PUTCHR;
 	cio(0);
+	screen.lineLength[y] = 0;
 }
 
 
@@ -342,12 +350,14 @@ void drawInsertLine(unsigned char y, unsigned char yBottom)
 	static unsigned char ch = CH_INSLINE, chD = CH_DELLINE;
 	flushBuffer();
 	if (isXep80()) {
-		setBurstMode(1);
 		drawClearLine(yBottom);
 		saveLine = screen.xepLines[yBottom];
-		for (yp = yBottom;yp > y;yp--) setXepRowPtr(yp, screen.xepLines[yp-1]);
+		for (yp = yBottom;yp > y;yp--) {
+			setXepRowPtr(yp, screen.xepLines[yp-1]);
+			screen.lineLength[yp] = screen.lineLength[yp-1];
+		}
 		setXepRowPtr(y, saveLine);
-		setBurstMode(0);
+		screen.lineLength[y] = 0;
 		return;
 	}
 	OS.dspflg = 0;
@@ -365,6 +375,8 @@ void drawInsertLine(unsigned char y, unsigned char yBottom)
 	OS.iocb[0].buflen =  1;
 	OS.iocb[0].command = IOCB_PUTCHR;
 	cio(0);
+	for (yp = yBottom;yp > y;yp--) screen.lineLength[yp] = screen.lineLength[yp-1];
+	screen.lineLength[y] = 0;
 }
 
 void drawDeleteLine(unsigned char y, unsigned char yBottom)
@@ -373,12 +385,14 @@ void drawDeleteLine(unsigned char y, unsigned char yBottom)
 	static unsigned char ch = CH_DELLINE, chI = CH_INSLINE;
 	flushBuffer();
 	if (isXep80()) {
-		setBurstMode(1);
 		drawClearLine(y);
 		saveLine = screen.xepLines[y];
-		for (yp = y;yp +1 <= yBottom;yp++) setXepRowPtr(yp, screen.xepLines[yp+1]);
+		for (yp = y;yp +1 <= yBottom;yp++) {
+			setXepRowPtr(yp, screen.xepLines[yp+1]);
+			screen.lineLength[yp] = screen.lineLength[yp+1];
+		}
 		setXepRowPtr(yBottom, saveLine);
-		setBurstMode(0);
+		screen.lineLength[yBottom] = 0;
 		return;
 	}
 	OS.crsinh = 1;
@@ -396,17 +410,20 @@ void drawDeleteLine(unsigned char y, unsigned char yBottom)
 		OS.iocb[0].command = IOCB_PUTCHR;
 		cio(0);
 	}
+	for (yp = y;yp+1 <= yBottom;yp++) screen.lineLength[yp] = screen.lineLength[yp+1];
+	screen.lineLength[yBottom] = 0;
 }
 
 void drawInsertChar(unsigned char x, unsigned char y)
 {
 	static unsigned char ch = CH_INSCHR;
-		if (x >= screen.screenWidth)return;
+	if (x >= screen.screenWidth)return;
 	flushBuffer();
 	if (isXep80()) {
 		drawXEPCharAt(CH_EOL, XEPRMARGIN-1, y);
 		drawXEPCharAt(CH_EOL, XEPRMARGIN, y);
 	}
+	if (x < screen.lineLength[y])screen.lineLength[y]++;
 	OS.dspflg = 0;
 	OS.rowcrs = y;
 	OS.colcrs = OS.lmargn + x;
@@ -432,6 +449,7 @@ void drawDeleteChar(unsigned char x, unsigned char y)
 	OS.iocb[0].buflen =  1;
 	OS.iocb[0].command = IOCB_PUTCHR;
 	cio(0);
+	if (x < screen.lineLength[y])screen.lineLength[y]--;
 }
 
 void drawBell(void)
