@@ -267,16 +267,12 @@ void drawCharsAt(unsigned char *buffer, unsigned char bufferLen, unsigned char x
 			burst = 1;
 		} else burst = 0;
 		OS.iocb[0].buffer = buffer;
-		OS.iocb[0].buflen = bufferLen-burst;
+		OS.iocb[0].buflen = bufferLen;
 		OS.iocb[0].command = IOCB_PUTCHR;
 		cio(0);
-		OS.colcrs = x + bufferLen-burst;
 		if (burst) {
+			setXEPHPos(OS.colcrs);
 			setBurstMode(0);
-			OS.iocb[0].buffer = buffer + bufferLen - 1;
-			OS.iocb[0].buflen = 1;
-			OS.iocb[0].command = IOCB_PUTCHR;
-			cio(0);
 		}
 		return;
 	}
@@ -294,14 +290,6 @@ void drawCharsAt(unsigned char *buffer, unsigned char bufferLen, unsigned char x
 	OS.iocb[0].buflen = bufferLen;
 	OS.iocb[0].command = IOCB_PUTCHR;
 	cio(0);
-	if (x + bufferLen >= screen.screenWidth) {
-		OS.colcrs = OS.lmargn;
-		if (y < SCREENLINES -1) OS.rowcrs = y + 1;
-		else OS.rowcrs = SCREENLINES - 1;
-	} else {
-		OS.colcrs = x + bufferLen;
-		OS.rowcrs = y;
-	}
 	if (logMapTouch) {
 		OS.logmap[0] = OS.logmap[1] = OS.logmap[2] =  OS.logmap[3] = 0xff; 
 	}
