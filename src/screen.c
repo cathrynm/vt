@@ -11,7 +11,7 @@ struct screenDataStruct {
 	unsigned char screenWidth;
 	unsigned char lastCharX, lastCharY, bufferLen, bufferX, bufferY;
 	unsigned char directDraw;
-	unsigned char burst, xepX, xepY;
+	unsigned char burst, xepX, xepY, fillFlag;
 	unsigned char clearBuffer[SCREENCOLUMNS];
 	unsigned char buffer[SCREENCOLUMNS];
 	unsigned short lineTab[SCREENLINES];
@@ -147,7 +147,7 @@ void setXEPLastChar(unsigned char c)
 { // 80 = cr
 	OS.dspflg = 1;
 	OS.rowcrs = XEPLINES-1;
-	OS.colcrs = 80;
+	OS.colcrs = XEPRMARGIN+1;
 	OS.iocb[0].buffer = &c;
 	OS.iocb[0].buflen = 1;
 	OS.iocb[0].command = IOCB_PUTCHR;
@@ -195,7 +195,6 @@ void setXepRowPtr(unsigned char y, unsigned char val) {
 
 void drawClearScreen(void)
 {
-	unsigned char fillFlag;
 	unsigned char y;
 	static const unsigned char clearScreen = CH_CLR;
 	flushBuffer();
@@ -206,8 +205,8 @@ void drawClearScreen(void)
 		OS.iocb[0].aux2 = isXep80Internal()? XEP_FILLSPACE:XEP_FILLEOL;
 		OS.iocb[0].command = 20;
 		cio(0);
-		fillFlag = isXep80Internal()? 0x40: (isIntl()? 0x20: 0x00);
-		for (y = 0;y<XEPLINES;y++)setXepRowPtr(y, fillFlag| y);
+		screen.fillFlag = isXep80Internal()? 0x40: (isIntl()? 0x20: 0x00);
+		for (y = 0;y<XEPLINES;y++)setXepRowPtr(y, screen.fillFlag| y);
 	} else {
 		OS.dspflg = 0;
 		OS.iocb[0].buffer = &clearScreen;
@@ -405,6 +404,7 @@ void drawDeleteLine(unsigned char y, unsigned char yBottom)
 		setXepRowPtr(yBottom, saveLine);
 		screen.lineLength[yBottom] = 0;
 		setBurstMode(0);
+
 		return;
 	}
 	OS.crsinh = 1;
