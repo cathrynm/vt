@@ -251,9 +251,9 @@ void cursorUpdate(unsigned char x, unsigned char y)
 
 void drawCharsAt(unsigned char *buffer, unsigned char bufferLen, unsigned char x, unsigned char y)
 {
-	unsigned char burst;
 	unsigned char logMapTouch = 0;
 	if ((x >= screen.screenWidth) || !bufferLen)return;
+	if (x + bufferLen > screen.screenWidth)bufferLen = screen.screenWidth - x;
 	if (screen.directDraw) {
 		writeScreen(buffer, bufferLen, x, y);
 		return;
@@ -261,23 +261,16 @@ void drawCharsAt(unsigned char *buffer, unsigned char bufferLen, unsigned char x
 	OS.rowcrs = y;
 	OS.colcrs = x;
 	if (isXep80()) {
-		if (x + bufferLen >= screen.screenWidth)bufferLen = screen.screenWidth - x;
-		if (bufferLen > 1) {
-			setBurstMode(1);
-			burst = 1;
-		} else burst = 0;
+		setBurstMode(1);
 		OS.iocb[0].buffer = buffer;
 		OS.iocb[0].buflen = bufferLen;
 		OS.iocb[0].command = IOCB_PUTCHR;
 		cio(0);
-		if (burst) {
-			setXEPHPos(OS.colcrs);
-			setBurstMode(0);
-		}
+		setXEPHPos(OS.colcrs); // Key to burst mode.  Need to put cursor back to OS.colcrs
+		setBurstMode(0);
 		return;
 	}
 	if (x + bufferLen >= screen.screenWidth) {
-		bufferLen = screen.screenWidth - x;
 		if (y >= SCREENLINES -1) {
 			bufferLen--;
 			if (!bufferLen)return;  // Never draw into the very last character of the last line
@@ -285,7 +278,6 @@ void drawCharsAt(unsigned char *buffer, unsigned char bufferLen, unsigned char x
 		logMapTouch = y + 1;
 		OS.logmap[0] = OS.logmap[1] = OS.logmap[2] = OS.logmap[3] = 0; // HACK, prevents atari from wrapping
 	}
-
 	OS.iocb[0].buffer = buffer;
 	OS.iocb[0].buflen = bufferLen;
 	OS.iocb[0].command = IOCB_PUTCHR;
@@ -326,16 +318,13 @@ void drawClearLine(unsigned char y)
 {
 	static unsigned char ch = CH_INSLINE, chD = CH_DELLINE;
 	if (y >= SCREENLINES)return;
+	if (isXep80()) {
+		drawClearCharsAt(screen.screenWidth - OS.lmargn, OS.lmargn, y);
+		return;
+	}
 	OS.crsinh = 1;
 	OS.rowcrs = y;
 	OS.colcrs = OS.lmargn;
-	if (isXep80()) {
-		OS.iocb[0].buffer = screen.clearBuffer;
-		OS.iocb[0].buflen =  screen.screenWidth - OS.lmargn;
-		OS.iocb[0].command = IOCB_PUTCHR;
-		cio(0);
-		return;
-	}
 	OS.dspflg = 0;
 	OS.iocb[0].buffer = &chD;
 	OS.iocb[0].buflen =  1;
