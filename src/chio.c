@@ -65,18 +65,6 @@ unsigned char isIntl(void)
 unsigned char closeChio(void)
 {
 	unsigned char err = ERR_NONE;
-	if (chio.xep80) {
-		setXepCharSet(isIntl()? XEPCH_ATINT: XEPCH_ATASCII); 
-		drawClearScreen();
-		OS.iocb[0].buffer = eColon;
-		OS.iocb[0].buflen = strlen(eColon);
-		OS.iocb[0].aux1 = 12;
-		OS.iocb[0].aux2 = XEP_RESET;
-		OS.iocb[0].command = 20;
-		cio(0);
-
-
-	}
 	if (chio.fullAscii) {
 		OS.chbas = chio.chbas;
 	}
@@ -723,7 +711,7 @@ void initAscii(unsigned char fontBase) {
 unsigned char XEP80Test(void)
 {
 	unsigned char err;
-	if (OS.rmargn > 39) {
+	if (OS.rmargn >= 0x40) {
 		err = ERR_NONE;
 		OS.rowcrs = 0;OS.colcrs = OS.lmargn;
 		drawChar(CH_ESC);drawChar(255);

@@ -10,7 +10,7 @@ typedef struct screenDataStruct screenStruct;
 struct screenDataStruct {
 	unsigned char screenWidth;
 	unsigned char lastCharX, lastCharY, bufferLen, bufferX, bufferY;
-	unsigned char directDraw;
+	unsigned char directDraw, origRMargn;
 	unsigned char burst, xepX, xepY, fillFlag;
 	unsigned char clearBuffer[SCREENCOLUMNS];
 	unsigned char buffer[SCREENCOLUMNS];
@@ -85,27 +85,24 @@ unsigned char directDrawTest(void)
 	return 0;
 }
 
-void initScreen(void)
-{
-	unsigned char n;
-	for (n = 0;n < sizeof(screen.clearBuffer);n++)screen.clearBuffer[n] = ' ';
-	screen.screenWidth = OS.rmargn + 1; 
-	screen.bufferLen = 0;
-	screen.bufferX = 255;
-	screen.bufferY = 0;
-	screen.burst = 0;
-	if (isXep80()) {
-		OS.rmargn = XEPRMARGIN;
-		screen.screenWidth = XEPRMARGIN - 1;
+void setXEPRMargin(unsigned char x) {
+	OS.iocb[0].buffer = eColon;
+	OS.iocb[0].buflen = 2;
+	if ((x >= 0x40) && (x < 0x50)) {
+		OS.iocb[0].aux1 = 12;
+		OS.iocb[0].aux2 = XEP_SETRIGHTMARGINLO | (x-0x40); // Set to low 4 bits
+		OS.iocb[0].command = 20;
+		cio(0);
+	} else {
+		OS.iocb[0].aux1 = 12;
+		OS.iocb[0].aux2 = XEP_SETRIGHTMARGINLO | (x & 0xf); // Set to low 4 bits
+		OS.iocb[0].command = 20;
+		cio(0);
+		OS.iocb[0].aux1 = 12;
+		OS.iocb[0].aux2 = XEP_SETRIGHTMARGINHI + (x >> 4);
+		OS.iocb[0].command = 20;
+		cio(0);
 	}
-	screen.directDraw = directDrawTest();
-	drawClearScreen();
-}
-
-void screenRestore(void)
-{
-	OS.dspflg = 0;
-	if (isXep80()) setBurstMode(0);
 }
 
 void setXEPXPos(unsigned char hpos) {
@@ -142,6 +139,51 @@ void setXEPYPos(unsigned char y) {
 	cio(0);
 	screen.xepY = y;
 }
+
+void initScreen(void)
+{
+	unsigned char n;
+	for (n = 0;n < sizeof(screen.clearBuffer);n++)screen.clearBuffer[n] = ' ';
+	screen.screenWidth = OS.rmargn + 1; 
+	screen.bufferLen = 0;
+	screen.bufferX = 255;
+	screen.bufferY = 0;
+	screen.burst = 0;
+	screen.origRMargn = OS.rmargn;
+	if (isXep80()) {
+		OS.colcrs = 0;
+		setXEPXPos(OS.colcrs);
+		OS.rowcrs = OS.lmargn;
+		setXEPYPos(OS.rowcrs);
+		OS.rmargn = XEPRMARGIN;
+		setXEPRMargin(OS.rmargn);
+		screen.screenWidth = XEPRMARGIN - 1;
+	}
+	screen.directDraw = directDrawTest();
+	drawClearScreen();
+}
+
+void screenRestore(void)
+{
+	OS.dspflg = 0;
+	if (isXep80()) {
+		setBurstMode(0);
+		OS.iocb[0].buffer = eColon;
+		OS.iocb[0].buflen = strlen(eColon);
+		OS.iocb[0].aux1 = 12;
+		OS.iocb[0].aux2 = XEP_RESET;
+		OS.iocb[0].command = 20;
+		cio(0);
+		OS.colcrs = OS.lmargn;
+		OS.rowcrs = 0;
+		setXEPXPos(OS.colcrs);
+		setXEPYPos(OS.rowcrs);
+		OS.rmargn = screen.origRMargn;
+		setXEPRMargin(OS.rmargn);
+	}
+	OS.dspflg = 0;
+}
+
 
 void setXEPLastChar(unsigned char c)
 { // 80 = cr
