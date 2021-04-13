@@ -266,6 +266,7 @@ void drawCharsAt(unsigned char *buffer, unsigned char bufferLen, unsigned char x
 		OS.iocb[0].buflen = bufferLen;
 		OS.iocb[0].command = IOCB_PUTCHR;
 		cio(0);
+		setXEPYPos(OS.rowcrs);
 		setXEPXPos(OS.colcrs); // Key to burst mode.  Need to put cursor back to OS.colcrs
 		setBurstMode(0);
 		return;
@@ -300,6 +301,7 @@ void flushBuffer(void)
 void drawCharAt(unsigned char c, unsigned char attribute, unsigned char x, unsigned char y)
 {
 	if ((y >= SCREENLINES) || (x >= screen.screenWidth))return;
+	if (c == 0x9b)return;
 	if (y != screen.bufferY || x != screen.bufferX) flushBuffer();
 	if (!screen.bufferLen) {
 		screen.bufferX = x;
