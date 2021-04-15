@@ -5,12 +5,19 @@
 #define SCREENLINES 24
 #define SCREENCOLUMNS 255
 #define XEPRMARGIN 81 // Two extra for delete character. 
+#define XEPATR_INVERSE 0x1
+#define XEPATR_BLINK 0x4
+#define XEPATR_DOUBLEWIDE 0x10
+#define XEPATR_UNDERLINE 0x20
+#define XEPATR_BLANK 0x40
+#define XEPATR_GRAPHICS 0x80
 
 typedef struct screenDataStruct screenStruct;
 struct screenDataStruct {
 	unsigned char screenWidth;
 	unsigned char lastCharX, lastCharY, bufferLen, bufferX, bufferY;
 	unsigned char directDraw, origRMargn;
+	unsigned char xepCharset;
 	unsigned char burst, xepX, xepY, fillFlag;
 	unsigned char clearBuffer[SCREENCOLUMNS];
 	unsigned char buffer[SCREENCOLUMNS];
@@ -140,6 +147,28 @@ void setXEPYPos(unsigned char y) {
 	screen.xepY = y;
 }
 
+unsigned char isXep80Internal(void) {
+	return screen.xepCharset == XEPCH_INTERN;
+}
+
+unsigned char setXepCharSet(unsigned char which)
+{
+	unsigned char err = ERR_NONE;
+	if (!isXep80() || (which == screen.xepCharset))return err;
+	OS.iocb[0].buffer = eColon;
+	OS.iocb[0].buflen = strlen(eColon);
+	OS.iocb[0].aux1 = 12;
+	OS.iocb[0].aux2 = which;
+	OS.iocb[0].command = 20;
+	cio(0);
+	iocbErrUpdate(0, &err);
+	if (err == ERR_NONE) {
+		screen.xepCharset = which;
+		setFullAscii((which == XEPCH_INTERN)); 
+	}
+	return err;
+}
+
 void initScreen(void)
 {
 	unsigned char n;
@@ -165,23 +194,19 @@ void initScreen(void)
 
 void screenRestore(void)
 {
-	OS.dspflg = 0;
+	flushBuffer();
 	if (isXep80()) {
-		setBurstMode(0);
-		OS.iocb[0].buffer = eColon;
-		OS.iocb[0].buflen = strlen(eColon);
-		OS.iocb[0].aux1 = 12;
-		OS.iocb[0].aux2 = XEP_RESET;
-		OS.iocb[0].command = 20;
-		cio(0);
-		OS.colcrs = OS.lmargn;
-		OS.rowcrs = 0;
 		setXEPXPos(OS.colcrs);
 		setXEPYPos(OS.rowcrs);
+		setBurstMode(0);
+		setXepCharSet(isIntl()? XEPCH_ATINT: XEPCH_ATASCII);
 		OS.rmargn = screen.origRMargn;
-		setXEPRMargin(OS.rmargn);
 	}
 	OS.dspflg = 0;
+	OS.iocb[0].buffer = &clearScreenChar;
+	OS.iocb[0].buflen = 1;
+	OS.iocb[0].command = IOCB_PUTCHR;
+	cio(0);
 }
 
 
@@ -196,15 +221,20 @@ void setXEPLastChar(unsigned char c)
 	cio(0);
 }
 
-void setXEPExtraByte(unsigned char c)
+void setXEPCommand(unsigned char c, unsigned char command)
 {
 	setXEPLastChar(c);
 	OS.iocb[0].buffer = eColon;
 	OS.iocb[0].buflen = 2;
 	OS.iocb[0].aux1 = 12;
-	OS.iocb[0].aux2 = XEP_SETEXTRABYTE;
+	OS.iocb[0].aux2 = command;
 	OS.iocb[0].command = 20;
 	cio(0);
+}
+
+void setXEPExtraByte(unsigned char c)
+{
+	setXEPCommand(c, XEP_SETEXTRABYTE);
 }
 
 
@@ -238,7 +268,6 @@ void setXepRowPtr(unsigned char y, unsigned char val) {
 void drawClearScreen(void)
 {
 	unsigned char y;
-	static const unsigned char clearScreen = CH_CLR;
 	flushBuffer();
 	if (isXep80()) {
 		OS.iocb[0].buffer = eColon;
@@ -251,7 +280,7 @@ void drawClearScreen(void)
 		for (y = 0;y<XEPLINES;y++)setXepRowPtr(y, screen.fillFlag| y);
 	} else {
 		OS.dspflg = 0;
-		OS.iocb[0].buffer = &clearScreen;
+		OS.iocb[0].buffer = &clearScreenChar;
 		OS.iocb[0].buflen = 1;
 		OS.iocb[0].command = IOCB_PUTCHR;
 		cio(0);

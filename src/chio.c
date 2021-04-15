@@ -1,8 +1,5 @@
 
 #include "main.h"
-#define XEPCH_ATASCII 0xd4
-#define XEPCH_ATINT 0xd5
-#define XEPCH_INTERN 0xd6
 
 
 typedef struct chioDataStruct chioStruct;
@@ -16,19 +13,17 @@ struct chioDataStruct {
 	unsigned char chbas; // Original character set coming in here.
 	unsigned char fullAscii; // {}~` characters are copied in.
 	unsigned char xep80;
-	unsigned char xepCharset;
 };
 
 chioStruct chio;
 unsigned char *eColon = "E:";
+unsigned char clearScreenChar = CH_CLR;
 
 unsigned char isXep80(void) {
 	return chio.xep80;
 }
 
-unsigned char isXep80Internal(void) {
-	return chio.xepCharset == XEPCH_INTERN;
-}
+
 
 void drawChar(unsigned char ch)
 {
@@ -38,28 +33,14 @@ void drawChar(unsigned char ch)
 	cio(0);
 }
 
-
-unsigned char setXepCharSet(unsigned char which)
-{
-	unsigned char err = ERR_NONE;
-	if (!chio.xep80 || (which == chio.xepCharset))return err;
-	OS.iocb[0].buffer = eColon;
-	OS.iocb[0].buflen = strlen(eColon);
-	OS.iocb[0].aux1 = 12;
-	OS.iocb[0].aux2 = which;
-	OS.iocb[0].command = 20;
-	cio(0);
-	iocbErrUpdate(0, &err);
-	if (err == ERR_NONE) {
-		chio.xepCharset = which;
-		chio.fullAscii = (which == XEPCH_INTERN); 
-	}
-	return err;
-}
-
 unsigned char isIntl(void)
 {
 	return (chio.chbas == 204);
+}
+
+void setFullAscii(unsigned char fullAscii)
+{
+	chio.fullAscii = fullAscii;
 }
 
 unsigned char closeChio(void)
@@ -77,7 +58,12 @@ unsigned char closeChio(void)
 // Note, only need to check ones that go past 16 bits here.  These all get processed as drawable, not controls.
 void convertLongToVisibleChar(unsigned long c, unsigned char *ch, unsigned char *attrib)
 {
-	if (isIntl()) { // international 
+	if (isXep80Internal()) {
+		switch(c) {
+			default:
+				break;
+		}
+	} else if (isIntl()) { // international 
 		switch(c) {
 			case 0x1F8B0:
 				*ch = 0x7d;
@@ -116,10 +102,151 @@ void convertAsciiToVisibleChar(unsigned char *ch, unsigned char *attrib)
 	*ch = ERRCHAR;
 }
 
+
+// XEP80Internal
+#define XEPICH_CIJ 0
+#define XEPICH_UPARROW 1
+#define XEPICH_0SLASH 2
+#define XEPICH_POUND 3
+#define XEPICH_XTHING 4
+#define XEPICH_OTHERQUOTE 5
+#define XEPICH_SMALLPLUS 6
+#define XEPICH_SQUIGGLE 7
+#define XEPICH_CTAIL 8
+#define XEPICH_CNTILDA 9
+#define XEPICH_CAE 10
+#define XEPICH_CADOTS 11
+#define XEPICH_CODOTS 12
+#define XEPICH_CADOT 13
+#define XEPICH_CUDOTS 14
+#define XEPICH_COE 15
+#define XEPICH_LIJ 16
+#define XEPICH_BETA 17
+#define XEPICH_LADOTLEFT 18
+#define XEPICH_LEDOTLEFT 19
+#define XEPICH_LIDOTLEFT 20
+#define XEPICH_LIDOTS 21
+#define XEPICH_LUDOTLEFT 22
+#define XEPICH_LEDOTRIGHT 23
+#define XEPICH_LCTAIL 24
+#define XEPICH_LNTILDA 25
+#define XEPICH_LAE 26
+#define XEPICH_LADOTS 27
+#define XEPICH_LODOTS 28
+#define XEPICH_LADOT 29
+#define XEPICH_LUDOTS 30
+#define XEPICH_LOE 31
+
+
+
+
+
+
+
 void convertShortToVisibleChar(unsigned short c, unsigned char *ch, unsigned char *attrib)
 {
 	*attrib = 0;
-	if (isIntl()) { // international 
+	if (isXep80Internal()) {
+		switch(c) {
+			case 0x0132:
+	            *ch = XEPICH_CIJ;
+	            return;
+	        case 0x21e7:
+	            *ch = XEPICH_UPARROW;
+	            return;
+	        case 0x00f8:
+	            *ch = XEPICH_0SLASH;
+	            return;
+	        case 0x00a3:
+	            *ch = XEPICH_POUND;
+				return;
+			case 0x29bb:  // what is this strange character?  #4 of XEP80 internal set. Calling it X over circle.
+			    *ch = XEPICH_XTHING;
+				return;
+			case 0x00a8: // diaeresis?
+	            *ch = XEPICH_OTHERQUOTE;
+				return;
+			case 0x00b0: // degree symbol
+	            *ch = XEPICH_SMALLPLUS;
+				return;
+			case 0x00a7:
+	            *ch = XEPICH_SQUIGGLE;
+				return;
+			case 0x00c7:
+	            *ch = XEPICH_CTAIL;
+				return;
+			case 0x00D1:
+	            *ch = XEPICH_CNTILDA;
+				return;
+			case 0x00c6:
+	            *ch = XEPICH_CAE;
+				return;
+			case 0x00c4:
+	            *ch = XEPICH_CADOTS;
+				return;
+			case 0x00d6:
+	            *ch = XEPICH_CODOTS;
+				return;
+			case 0x00c5:
+	            *ch = XEPICH_CADOT;
+				return;
+			case 0x00DC:
+	            *ch = XEPICH_CUDOTS;
+				return;
+			case 0x0152:
+	            *ch = XEPICH_COE;
+				return;
+			case 0x0133:
+	            *ch = XEPICH_LIJ;
+				return;
+			case 0x00df:
+	            *ch = XEPICH_BETA;
+				return;
+			case 0x00e0:
+	            *ch = XEPICH_LADOTLEFT;
+				return;
+			case 0x00e8:
+	            *ch = XEPICH_LEDOTLEFT;
+				return;
+			case 0x00ec:
+	            *ch = XEPICH_LIDOTLEFT;
+				return;
+			case 0x00ef:
+	            *ch = XEPICH_LIDOTS;
+				return;
+			case 0x00f9:
+	            *ch = XEPICH_LUDOTLEFT;
+				return;
+			case 0x00e9:
+	            *ch = XEPICH_LEDOTRIGHT;
+				return;
+			case 0x00e7:
+	            *ch = XEPICH_LCTAIL;
+				return;
+			case 0x00f1:
+	            *ch = XEPICH_LNTILDA;
+				return;
+			case 0x00e6:
+	            *ch = XEPICH_LAE;
+				return;
+			case 0x00e4:
+	            *ch = XEPICH_LADOTS;
+				return;
+			case 0x00f6:
+	            *ch = XEPICH_LODOTS;
+				return;
+			case 0x00e5:
+	            *ch = XEPICH_LADOT;
+				return;
+			case 0x00fc:
+	            *ch = XEPICH_LUDOTS;
+				return;
+			case 0x0153:
+	            *ch = XEPICH_LOE;
+	            return;
+			default:break;
+		}
+	} else if (isIntl()) { // international 
 		switch(c) {
 			case 0x00a0:
 				*ch = ' ';
