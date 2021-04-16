@@ -23,6 +23,18 @@
 #define NUMPRIVATE 20
 
 
+// character attributes
+#define SGR_NORMAL 0
+#define SGR_BOLD 1
+#define SGR_UNDERLINE 4
+#define SGR_BLINK 5
+#define SGR_REVERSE 7
+#define SGR_INVISIBLE 8
+#define SGR_BOLDOFF 22
+#define SGR_UNDERLINEOFF 24
+#define SGR_BLINKOFF 25
+#define SGR_REVERSEOFF 27
+#define SGR_INVISBLEOFF 28
 
 // Line attributes
 #define LINEATTR_DECDHLT 1
@@ -60,7 +72,7 @@ typedef struct vtScreenStruct vtScreen;
 struct vtScreenStruct {
 	unsigned char x, y;
 	unsigned char tMargin, bMargin, rMargin;
-	unsigned char attribute, LED, keypadAlt;
+	unsigned char attribute, attribute1, LED, keypadAlt;
 	unsigned char mode[NUMMODES];
 	unsigned char modeP[NUMPRIVATE];
 	unsigned char charSet[2], charSetPick;
@@ -70,7 +82,7 @@ struct vtScreenStruct {
 	unsigned char lastColumn;
 
 	// saved cursor data
-	unsigned char xSave, ySave, attributeSave;
+	unsigned char xSave, ySave, attributeSave, attribute1Save;
 	unsigned char charsetSave[4];
 	unsigned char saveWrap, saveOriginMode;
 	unsigned char saveCharSetPick;
@@ -133,6 +145,7 @@ void resetVt(void)
 	vt.bMargin = VTSCREENLINES - 1;
 	vt.rMargin = 79;
 	vt.attribute = 0;
+	vt.attribute1 = 0;
 	vt.LED = 0;
 	vt.charSet[0] = 'B';
 	vt.charSet[1] = 'B';
@@ -443,8 +456,30 @@ void setAttributes(void)
 {
 	unsigned char n;
 	for (n = 0;n< esc.paramCount;n++) {
-		if (esc.params[n] == 0)vt.attribute = 0;
-		else vt.attribute |= (1 << n);
+		if (esc.params[n] == 0){
+			vt.attribute = 0;
+			vt.attribute1 = 0;
+		} else if (esc.params[n] < 8)vt.attribute |= (1 << esc.params[n]);
+		else if (esc.params[n] < 16) vt.attribute1 |= (1 << (esc.params[n] - 8));
+		else switch(esc.params[n]) {
+			case SGR_BOLDOFF:
+				vt.attribute &= ~(1 << SGR_BOLD);
+				break;
+			case SGR_UNDERLINEOFF:
+				vt.attribute &= ~(1 << SGR_UNDERLINE);
+				break;
+			case SGR_BLINKOFF:
+				vt.attribute &= ~(1 << SGR_BLINK);
+				break;
+			case SGR_REVERSEOFF:
+				vt.attribute &= ~(1 << SGR_REVERSE);
+				break;
+			case SGR_INVISBLEOFF:
+				vt.attribute1 &= ~(1 << (SGR_INVISIBLE - 8));
+				break;
+			default:
+				break;
+		}
 	}
 }
 
@@ -472,6 +507,7 @@ void cursorSave(void)
 	vt.xSave = vt.x;
 	vt.ySave = vt.y;
 	vt.attributeSave = vt.attribute;
+	vt.attribute1Save = vt.attribute1;
 	vt.charsetSave[0] = vt.charSet[0];
 	vt.charsetSave[1] = vt.charSet[1];
 	vt.saveWrap = vt.modeP[MODEP_DECAWM];
@@ -485,6 +521,7 @@ void cursorRestore(void)
 	vt.x = vt.xSave;
 	vt.y = vt.ySave;
 	vt.attribute = vt.attributeSave;
+	vt.attribute1 = vt.attribute1Save;
 	vt.charSet[0] = vt.charsetSave[0];
 	vt.charSet[1] = vt.charsetSave[1];
 	vt.modeP[MODEP_DECAWM] = vt.saveWrap;
@@ -555,7 +592,7 @@ void cancelEscape(void)
 	vt.lastColumn = 0;
 	if (esc.commandIndex) {
 		esc.commandIndex = 0;
-		addChar(ERRCHAR, vt.attribute ^ ERRATTRIB);
+		addChar(ERRCHAR, ERRATTRIB);
 	}
 }
 
@@ -711,8 +748,14 @@ void processCommand(unsigned char c)
 		case 'q': // LED colors
 			setLED(esc.params[0]);
 			break;
+		case 's': // ansi.sys
+			cursorSave();
+			break;
 		case 'r': // set top and bottom margins
 			setVMargins(esc.params[0], esc.params[1]);
+			break;
+		case 'u': // ansi.sys
+			cursorRestore();
 			break;
 		case 'x':
 			reportTerminalParams(esc.params[0]);
