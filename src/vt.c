@@ -569,7 +569,7 @@ void insertCharacters(unsigned char num)
 	for(;num--;)drawInsertChar(vt.x, vt.y);
 }
 
-void addChar(unsigned char c, unsigned char attrib)
+void addChar(unsigned char c, unsigned char attrib, unsigned char attrib1)
 {
 	if (vt.mode[MODE_IRM]) drawInsertChar(vt.x, vt.y);
 	if ((vt.x == vt.rMargin) && vt.lastColumn) {
@@ -580,6 +580,7 @@ void addChar(unsigned char c, unsigned char attrib)
 			else scrollUp(1);
 		} else vt.x = vt.rMargin;
 	}
+	if (attrib1 & (1 << (SGR_INVISIBLE-8)))c = ' ';
 	drawCharAt(c, attrib, vt.x, vt.y);
 	if (vt.x < vt.rMargin) {
 		vt.x++;
@@ -592,7 +593,7 @@ void cancelEscape(void)
 	vt.lastColumn = 0;
 	if (esc.commandIndex) {
 		esc.commandIndex = 0;
-		addChar(ERRCHAR, ERRATTRIB);
+		addChar(ERRCHAR, ERRATTRIB, 0);
 	}
 }
 
@@ -916,7 +917,7 @@ void processVt52Command(unsigned char c)
 void displayUtf8Char(unsigned char c, unsigned char attribute)
 {
 	cursorHide();
-	addChar(c, vt.attribute ^ attribute);
+	addChar(c, vt.attribute ^ attribute, vt.attribute1);
 	esc.commandIndex = 0;
 }
 
@@ -998,7 +999,7 @@ void processChar(unsigned char c) {
 					ch = (unsigned char) wCh;attrib = 0;
 					convertAsciiToVisibleChar(&ch, &attrib);
 				} else convertShortToVisibleChar(wCh, &ch, &attrib);
-				addChar(ch, vt.attribute ^ attrib);
+				addChar(ch, vt.attribute ^ attrib, vt.attribute1);
 			}
 		} else {
 			if (esc.commandIndex) {
@@ -1036,7 +1037,7 @@ void processChar(unsigned char c) {
 					ch = (unsigned char) wCh;attrib = 0;
 					convertAsciiToVisibleChar(&ch, &attrib);
 				} else convertShortToVisibleChar(wCh, &ch, &attrib);
-				addChar(ch, vt.attribute ^ attrib);
+				addChar(ch, vt.attribute ^ attrib, vt.attribute1);
 			}
 		}
 	}
