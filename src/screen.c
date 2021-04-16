@@ -337,7 +337,6 @@ void drawCharsAt(unsigned char *buffer, unsigned char bufferLen, unsigned char x
 		OS.iocb[0].buflen = bufferLen;
 		OS.iocb[0].command = IOCB_PUTCHR;
 		cio(0);
-		setXEPYPos(OS.rowcrs);
 		setXEPXPos(OS.colcrs); // Key to burst mode.  Need to put cursor back to OS.colcrs
 		setBurstMode(0);
 		return;
