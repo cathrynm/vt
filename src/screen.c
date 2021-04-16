@@ -363,8 +363,7 @@ void flushBuffer(void)
 {
 	if (!screen.bufferLen)return;
 	drawCharsAt(screen.buffer, screen.bufferLen, OS.lmargn + screen.bufferX - screen.bufferLen, screen.bufferY);
-	if (screen.bufferX > screen.lineLength[screen.bufferY])
-		screen.lineLength[screen.bufferY] = screen.bufferX;
+
 	screen.bufferLen = 0;
 }
 
@@ -379,6 +378,8 @@ void drawCharAt(unsigned char c, unsigned char attribute, unsigned char x, unsig
 	}
 	screen.buffer[screen.bufferLen++] = c ^(attribute & 0x80);
 	screen.bufferX++;
+	if ((c != ' ') && screen.bufferX > screen.lineLength[screen.bufferY])
+		screen.lineLength[screen.bufferY] = screen.bufferX;
 }
 
 void drawClearCharsAt(unsigned char len, unsigned char x, unsigned char y)
@@ -386,7 +387,7 @@ void drawClearCharsAt(unsigned char len, unsigned char x, unsigned char y)
 	unsigned char oldLen;
 	if ((y >= SCREENLINES) || (x >= screen.screenWidth))return;
 	oldLen = screen.lineLength[y];
-	if (len > screen.screenWidth - x) {
+	if (len >= screen.screenWidth - x) {
 		len = screen.screenWidth - x;
 		if (x < screen.lineLength[y])screen.lineLength[y] = x;
 	}
