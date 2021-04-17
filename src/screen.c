@@ -28,7 +28,6 @@ struct screenDataStruct {
 
 screenStruct screen;
 
-
 void writeScreen(unsigned char *s, unsigned char len, unsigned char x, unsigned char y)
 {
 	static unsigned char sAtascii[4] = {0x40, 0x00, 0x20, 0x60};
@@ -294,16 +293,25 @@ void cursorHide(void)
 {
 	if (OS.crsinh) return;
 	OS.crsinh = 1;
+	if (isXep80()) {
+		OS.iocb[0].buffer = eColon;
+		OS.iocb[0].buflen = 2;
+		OS.iocb[0].aux1 = 12;
+		OS.iocb[0].aux2 = XEP_CURSOROFF;
+		OS.iocb[0].command = 20;
+		cio(0);
+	}
 }
 
 void cursorUpdate(unsigned char x, unsigned char y)
 {
 	static const unsigned char moveCursorUp = CH_CURS_UP;
 	if (x >= screen.screenWidth || y >= SCREENLINES) {
-		OS.crsinh = 1;
+		cursorHide();
 		return;
 	}
-	if ((OS.crsinh == 0) && (OS.colcrs == x + OS.lmargn) && (OS.rowcrs ==y))return;
+	if ((OS.crsinh == 0) && (OS.colcrs == x + OS.lmargn) && (OS.rowcrs == y))return;
+	endBurstMode();
 	OS.crsinh = 0;
 	OS.colcrs = x + OS.lmargn;
 	OS.rowcrs = y;
@@ -358,7 +366,7 @@ void drawCharsAt(unsigned char *buffer, unsigned char bufferLen, unsigned char x
 }
 
 
-void flushBufferContinue(void)
+void flushBuffer(void)
 {
 	if (!screen.bufferLen)return;
 	drawCharsAt(screen.buffer, screen.bufferLen, OS.lmargn + screen.bufferX - screen.bufferLen, screen.bufferY);
@@ -366,9 +374,8 @@ void flushBufferContinue(void)
 	screen.bufferLen = 0;
 }
 
-void flushBuffer(void)
+void endBurstMode(void)
 {
-	flushBufferContinue();
 	if (isXep80()) {
 		setBurstMode(0);
 	}
@@ -378,7 +385,7 @@ void drawCharAt(unsigned char c, unsigned char attribute, unsigned char x, unsig
 {
 	if ((y >= SCREENLINES) || (x >= screen.screenWidth))return;
 	if (c == 0x9b)return;
-	if (y != screen.bufferY || x != screen.bufferX) flushBufferContinue();
+	if (y != screen.bufferY || x != screen.bufferX) flushBuffer();
 	if (!screen.bufferLen) {
 		screen.bufferX = x;
 		screen.bufferY = y;
@@ -393,7 +400,7 @@ void drawClearCharsAt(unsigned char len, unsigned char x, unsigned char y)
 {
 	unsigned char oldLen;
 	if ((y >= SCREENLINES) || (x >= screen.screenWidth) || (x >= screen.lineLength[y]))return;
-	if (y != screen.bufferY || x != screen.bufferX) flushBufferContinue();
+	if (y != screen.bufferY || x != screen.bufferX) flushBuffer();
 	oldLen = screen.lineLength[y];
 	if (len >= screen.screenWidth - x) {
 		len = screen.screenWidth - x;
@@ -435,7 +442,7 @@ void drawInsertLine(unsigned char y, unsigned char yBottom)
 	static unsigned char ch = CH_INSLINE, chD = CH_DELLINE;
 	if (isXep80()) {
 		drawClearLine(yBottom);
-		flushBufferContinue();
+		flushBuffer();
 		setBurstMode(1);
 		saveLine = screen.xepLines[yBottom];
 		for (yp = yBottom;yp > y;yp--) {
@@ -473,7 +480,7 @@ void drawDeleteLine(unsigned char y, unsigned char yBottom)
 	static unsigned char ch = CH_DELLINE, chI = CH_INSLINE;
 	if (isXep80()) {
 		drawClearLine(y);
-		flushBufferContinue();
+		flushBuffer();
 		setBurstMode(1);
 		saveLine = screen.xepLines[y];
 		for (yp = y;yp +1 <= yBottom;yp++) {

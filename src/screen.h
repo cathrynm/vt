@@ -14,6 +14,9 @@
 #define XEP_FILLPREVCHAR	0xc4
 #define XEP_FILLSPACE		0xc5
 #define XEP_FILLEOL			0xc6
+#define XEP_CURSOROFF		0xd8
+#define XEP_CURSORON		0xd9
+#define XEP_CURSORONBLINK		0xda
 #define XEP_WRITEBYTE   	0xe3
 #define XEP_SETEXTRABYTE	0xe4
 #define XEP_WRITEINTERNALBYTE 0xe5
@@ -46,5 +49,6 @@ unsigned char isXep80Internal(void);
 void setXEPLastChar(unsigned char c);
 void setXEPCommand(unsigned char c, unsigned char command);
 unsigned char isXep80Internal(void);
+void endBurstMode(void);
 
 #endif
