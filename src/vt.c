@@ -58,7 +58,8 @@
 #define MODEP_DECARM 8
 #define MODEP_DECPFF 18
 #define MODEP_DECPEX 19
-#define NUMMODEP 20
+#define MODEP_SHOWCURSOR 25
+#define NUMMODEP 26
 // This is, I think, secreat of VT102 emulation, I discover
 // https://github.com/mattiase/wraptest
 
@@ -161,6 +162,7 @@ void resetVt(void)
 	for (n = 0;n<NUMPRIVATE;n++)vt.modeP[n] = 0;
 	vt.modeP[MODEP_DECANM] = 1; 
 	vt.mode[MODE_SRM] = 1; // Disable local echo
+	vt.modeP[MODEP_SHOWCURSOR] = 1;
 	cursorSave();
 	clearScreen(2);
 
@@ -168,7 +170,9 @@ void resetVt(void)
 
 void fixCursor(void)
 {
-	cursorUpdate(vt.x, vt.y);
+	if (vt.modeP[MODEP_SHOWCURSOR])
+		cursorUpdate(vt.x, vt.y);
+	else cursorHide();
 }
 
 void scrollDown(unsigned char lines)

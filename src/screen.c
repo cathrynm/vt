@@ -338,7 +338,6 @@ void drawCharsAt(unsigned char *buffer, unsigned char bufferLen, unsigned char x
 		OS.iocb[0].command = IOCB_PUTCHR;
 		cio(0);
 		setXEPXPos(OS.colcrs); // Key to burst mode.  Need to put cursor back to OS.colcrs
-		setBurstMode(0);
 		return;
 	}
 	if (x + bufferLen >= screen.screenWidth) {
@@ -359,7 +358,7 @@ void drawCharsAt(unsigned char *buffer, unsigned char bufferLen, unsigned char x
 }
 
 
-void flushBuffer(void)
+void flushBufferContinue(void)
 {
 	if (!screen.bufferLen)return;
 	drawCharsAt(screen.buffer, screen.bufferLen, OS.lmargn + screen.bufferX - screen.bufferLen, screen.bufferY);
@@ -367,31 +366,39 @@ void flushBuffer(void)
 	screen.bufferLen = 0;
 }
 
+void flushBuffer(void)
+{
+	flushBufferContinue();
+	if (isXep80()) {
+		setBurstMode(0);
+	}
+}
+
 void drawCharAt(unsigned char c, unsigned char attribute, unsigned char x, unsigned char y)
 {
 	if ((y >= SCREENLINES) || (x >= screen.screenWidth))return;
 	if (c == 0x9b)return;
-	if (y != screen.bufferY || x != screen.bufferX) flushBuffer();
+	if (y != screen.bufferY || x != screen.bufferX) flushBufferContinue();
 	if (!screen.bufferLen) {
 		screen.bufferX = x;
 		screen.bufferY = y;
 	}
 	screen.buffer[screen.bufferLen++] = c ^(attribute & 0x80);
 	screen.bufferX++;
-	if ((c != ' ') && screen.bufferX > screen.lineLength[screen.bufferY])
+	if ((c != ' ') && (screen.bufferX > screen.lineLength[screen.bufferY]))
 		screen.lineLength[screen.bufferY] = screen.bufferX;
 }
 
 void drawClearCharsAt(unsigned char len, unsigned char x, unsigned char y)
 {
 	unsigned char oldLen;
-	if ((y >= SCREENLINES) || (x >= screen.screenWidth))return;
+	if ((y >= SCREENLINES) || (x >= screen.screenWidth) || (x >= screen.lineLength[y]))return;
+	if (y != screen.bufferY || x != screen.bufferX) flushBufferContinue();
 	oldLen = screen.lineLength[y];
 	if (len >= screen.screenWidth - x) {
 		len = screen.screenWidth - x;
 		if (x < screen.lineLength[y])screen.lineLength[y] = x;
 	}
-	if (x >= oldLen)return;
 	if (len > oldLen - x) len = oldLen - x;
 	OS.crsinh = 1;
 	drawCharsAt(screen.clearBuffer, len, x + OS.lmargn, y);
@@ -426,10 +433,9 @@ void drawInsertLine(unsigned char y, unsigned char yBottom)
 {
 	unsigned char yp, saveLine;
 	static unsigned char ch = CH_INSLINE, chD = CH_DELLINE;
-	flushBuffer();
 	if (isXep80()) {
 		drawClearLine(yBottom);
-		flushBuffer();
+		flushBufferContinue();
 		setBurstMode(1);
 		saveLine = screen.xepLines[yBottom];
 		for (yp = yBottom;yp > y;yp--) {
@@ -441,6 +447,7 @@ void drawInsertLine(unsigned char y, unsigned char yBottom)
 		setBurstMode(0);
 		return;
 	}
+	flushBuffer();
 	OS.dspflg = 0;
 	OS.crsinh = 1;
 	OS.colcrs = OS.lmargn;
@@ -464,10 +471,9 @@ void drawDeleteLine(unsigned char y, unsigned char yBottom)
 {
 	unsigned char saveLine, yp;
 	static unsigned char ch = CH_DELLINE, chI = CH_INSLINE;
-	flushBuffer();
 	if (isXep80()) {
 		drawClearLine(y);
-		flushBuffer();
+		flushBufferContinue();
 		setBurstMode(1);
 		saveLine = screen.xepLines[y];
 		for (yp = y;yp +1 <= yBottom;yp++) {
@@ -480,6 +486,7 @@ void drawDeleteLine(unsigned char y, unsigned char yBottom)
 
 		return;
 	}
+	flushBuffer();
 	OS.crsinh = 1;
 	OS.dspflg = 0;
 	OS.rowcrs = y;
@@ -502,13 +509,13 @@ void drawDeleteLine(unsigned char y, unsigned char yBottom)
 void drawInsertChar(unsigned char x, unsigned char y)
 {
 	static unsigned char ch = CH_INSCHR;
-	if (x >= screen.screenWidth)return;
+	if ((x >= screen.screenWidth) || (x >= screen.lineLength[y]))return;
 	flushBuffer();
 	if (isXep80()) {
 		drawXEPCharAt(CH_EOL, XEPRMARGIN-1, y);
 		drawXEPCharAt(CH_EOL, XEPRMARGIN, y);
 	}
-	if (x < screen.lineLength[y])screen.lineLength[y]++;
+	screen.lineLength[y]++;
 	OS.dspflg = 0;
 	OS.rowcrs = y;
 	OS.colcrs = OS.lmargn + x;
@@ -521,8 +528,8 @@ void drawInsertChar(unsigned char x, unsigned char y)
 void drawDeleteChar(unsigned char x, unsigned char y)
 {
 	static unsigned char ch = CH_DELCHR;
+	if ((x >= screen.screenWidth) || (x >= screen.lineLength[y]))return;
 	flushBuffer();
-	if (x >= screen.screenWidth)return;
 	if (isXep80()) {
 		drawXEPCharAt(' ', XEPRMARGIN-1, y);
 		drawXEPCharAt(CH_EOL, XEPRMARGIN, y);
@@ -534,7 +541,7 @@ void drawDeleteChar(unsigned char x, unsigned char y)
 	OS.iocb[0].buflen =  1;
 	OS.iocb[0].command = IOCB_PUTCHR;
 	cio(0);
-	if (x < screen.lineLength[y])screen.lineLength[y]--;
+	screen.lineLength[y]--;
 }
 
 void drawBell(void)
