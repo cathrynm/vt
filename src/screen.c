@@ -27,8 +27,8 @@ struct screenDataStruct {
 	unsigned short lineTab[SCREENLINES];
 	unsigned char xepLines[XEPLINES];
 	unsigned char lineLength[XEPLINES];
-	void (*eColonPutByte)(void);
-	void (*eColonSpecial)(void);
+	void (*eColonSpecial)();
+	void *eColonPutByte;
 };
 
 screenStruct screen;
@@ -126,6 +126,22 @@ void callEColonSpecial(unsigned char command, unsigned char aux1, unsigned char 
 	}
 }
 
+void callEColonPutByte(unsigned char ch)
+{
+	OS.iocb[0].buffer = &ch;
+	OS.iocb[0].buflen = 1;
+	OS.iocb[0].command = IOCB_PUTCHR;
+	cio(0);
+}
+
+void callEColonPutBytes(unsigned char *buf, unsigned char len)
+{
+	OS.iocb[0].buffer = buf;
+	OS.iocb[0].buflen = len;
+	OS.iocb[0].command = IOCB_PUTCHR;
+	cio(0);
+}
+
 void setBurstMode(unsigned char on)
 {
 	if (screen.burst == on)return;
@@ -139,10 +155,7 @@ unsigned char directDrawTest(void)
 	unsigned char n, y;
 	static const unsigned char drawTest[]  = {CH_CLR, '0', CH_EOL, '1'};
 	OS.dspflg = 0;
-	OS.iocb[0].buffer = drawTest;
-	OS.iocb[0].buflen = 4;
-	OS.iocb[0].command = IOCB_PUTCHR;
-	cio(0);
+	callEColonPutBytes((unsigned char *)drawTest, 4);
 	if (OS.savmsc[0] + 32 != '0')return 0;
 	for (n = 1;n < 255;n++) {
 		if (OS.savmsc[n]  + 32 == '1') {
@@ -212,7 +225,7 @@ void initScreen(void)
 	for (n = 0;n < 11;n++) {
 		if (OS.hatabs[n].id != 'E')continue;
 		devhdl = OS.hatabs[n].devhdl;
-		screen.eColonPutByte = (void (*)(void)) ( (unsigned short) devhdl->put  + 1);
+		screen.eColonPutByte = (void *) ( (unsigned short) devhdl->put + 1);
 		screen.eColonSpecial =  (void (*)(void)) ( (unsigned short) devhdl->special + 1);
 		break;
 	}
@@ -245,10 +258,7 @@ void screenRestore(void)
 		OS.rmargn = screen.origRMargn;
 	}
 	OS.dspflg = 0;
-	OS.iocb[0].buffer = &clearScreenChar;
-	OS.iocb[0].buflen = 1;
-	OS.iocb[0].command = IOCB_PUTCHR;
-	cio(0);
+	callEColonPutByte(clearScreenChar);
 }
 
 // This is secret of XEP80 burst mode here. 
@@ -276,10 +286,7 @@ void setXEPLastChar(unsigned char c)
 	OS.rowcrs = XEPLINES-1;
 	OS.colcrs = XEPRMARGIN+1;
 	xepCursorShadow();
-	OS.iocb[0].buffer = &c;
-	OS.iocb[0].buflen = 1;
-	OS.iocb[0].command = IOCB_PUTCHR;
-	cio(0);
+	callEColonPutByte(c);
 	OS.colcrs++; 
 	screen.currentXepX = OS.colcrs;
 }
@@ -322,10 +329,7 @@ void drawClearScreen(void)
 		for (y = 0;y<XEPLINES;y++)setXepRowPtr(y, screen.fillFlag| y);
 	} else {
 		OS.dspflg = 0;
-		OS.iocb[0].buffer = &clearScreenChar;
-		OS.iocb[0].buflen = 1;
-		OS.iocb[0].command = IOCB_PUTCHR;
-		cio(0);
+		callEColonPutByte(clearScreenChar);
 	}
 	for (y = 0;y< 24;y++) screen.lineLength[y] = 0;
 }
@@ -360,10 +364,7 @@ void cursorUpdate(unsigned char x, unsigned char y)
 	OS.rowcrs = y;
 	OS.dspflg = 0;
 	xepCursorShadow();
-	OS.iocb[0].buffer = &moveCursorLeft;
-	OS.iocb[0].buflen = 1;
-	OS.iocb[0].command = IOCB_PUTCHR;
-	cio(0);
+	callEColonPutByte(moveCursorLeft);
 	if (isXep80()) {
 		screen.currentXepX = OS.colcrs = x + OS.lmargn;
 	}
@@ -384,10 +385,7 @@ void drawCharsAt(unsigned char *buffer, unsigned char bufferLen, unsigned char x
 	OS.colcrs = x;
 	if (isXep80()) {
 		xepCursorShadow();
-		OS.iocb[0].buffer = buffer;
-		OS.iocb[0].buflen = bufferLen;
-		OS.iocb[0].command = IOCB_PUTCHR;
-		cio(0);
+		callEColonPutBytes(buffer, bufferLen);
 		screen.currentXepX = OS.colcrs = OS.colcrs + bufferLen;
 		return;
 	}
@@ -399,10 +397,7 @@ void drawCharsAt(unsigned char *buffer, unsigned char bufferLen, unsigned char x
 		logMapTouch = y + 1;
 		OS.logmap[0] = OS.logmap[1] = OS.logmap[2] = OS.logmap[3] = 0; // HACK, prevents atari from wrapping
 	}
-	OS.iocb[0].buffer = buffer;
-	OS.iocb[0].buflen = bufferLen;
-	OS.iocb[0].command = IOCB_PUTCHR;
-	cio(0);
+	callEColonPutBytes(buffer, bufferLen);
 	if (logMapTouch) {
 		OS.logmap[0] = OS.logmap[1] = OS.logmap[2] =  OS.logmap[3] = 0xff; 
 	}
@@ -460,14 +455,8 @@ void drawClearLine(unsigned char y)
 	OS.rowcrs = y;
 	OS.colcrs = OS.lmargn;
 	OS.dspflg = 0;
-	OS.iocb[0].buffer = &chD;
-	OS.iocb[0].buflen =  1;
-	OS.iocb[0].command = IOCB_PUTCHR;
-	cio(0);
-	OS.iocb[0].buffer = &ch;
-	OS.iocb[0].buflen =  1;
-	OS.iocb[0].command = IOCB_PUTCHR;
-	cio(0);
+	callEColonPutByte(chD);
+	callEColonPutByte(ch);
 	screen.lineLength[y] = 0;
 }
 
@@ -498,16 +487,10 @@ void drawInsertLine(unsigned char y, unsigned char yBottom)
 		if (yBottom < SCREENLINES -1) {
 			cursorHide();
 			OS.rowcrs = yBottom;
-			OS.iocb[0].buffer = &chD;
-			OS.iocb[0].buflen =  1;
-			OS.iocb[0].command = IOCB_PUTCHR;
-			cio(0);
+			callEColonPutByte(chD);
 		}
 		OS.rowcrs = y;
-		OS.iocb[0].buffer = &ch;
-		OS.iocb[0].buflen =  1;
-		OS.iocb[0].command = IOCB_PUTCHR;
-		cio(0);
+		callEColonPutByte(ch);
 	}
 	for (yp = yBottom;yp > y;yp--) screen.lineLength[yp] = screen.lineLength[yp-1];
 	screen.lineLength[y] = 0;
@@ -538,17 +521,11 @@ void drawDeleteLine(unsigned char y, unsigned char yBottom)
 		OS.dspflg = 0;
 		OS.rowcrs = y;
 		OS.colcrs = OS.lmargn;
-		OS.iocb[0].buffer = &ch;
-		OS.iocb[0].buflen =  1;
-		OS.iocb[0].command = IOCB_PUTCHR;
-		cio(0);
+		callEColonPutByte(ch);
 		if (yBottom < SCREENLINES - 1) { // Probably will blink but have no choice.
 			cursorHide();
 			OS.rowcrs = yBottom;
-			OS.iocb[0].buffer = &chI;
-			OS.iocb[0].buflen =  1;
-			OS.iocb[0].command = IOCB_PUTCHR;
-			cio(0);
+			callEColonPutByte(chI);
 		}
 	}
 	for (yp = y;yp+1 <= yBottom;yp++) screen.lineLength[yp] = screen.lineLength[yp+1];
@@ -570,10 +547,7 @@ void drawInsertChar(unsigned char x, unsigned char y)
 	OS.rowcrs = y;
 	OS.colcrs = OS.lmargn + x;
 	xepCursorShadow();
-	OS.iocb[0].buffer = &ch;
-	OS.iocb[0].buflen =  1;
-	OS.iocb[0].command = IOCB_PUTCHR;
-	cio(0);
+	callEColonPutByte(ch);
 	if (isXep80()) {
 		screen.currentXepX = OS.colcrs;
 	}
@@ -593,10 +567,7 @@ void drawDeleteChar(unsigned char x, unsigned char y)
 	OS.rowcrs = y;
 	OS.colcrs = OS.lmargn + x;
 	xepCursorShadow();
-	OS.iocb[0].buffer = &ch;
-	OS.iocb[0].buflen =  1;
-	OS.iocb[0].command = IOCB_PUTCHR;
-	cio(0);
+	callEColonPutByte(ch);
 	if (isXep80()) {
 		screen.currentXepX = OS.colcrs;
 	}
