@@ -19,7 +19,9 @@ struct screenDataStruct {
 	unsigned char lastCharX, lastCharY, bufferLen, bufferX, bufferY;
 	unsigned char directDraw, origRMargn;
 	unsigned char xepCharset;
-	unsigned char burst, xepX, xepY, fillFlag;
+	unsigned char burst;
+	unsigned char xepX, xepY; // xepX, xepY shadow cached value of colcrs, rowcrs in xep80 driver.
+	unsigned char fillFlag;
 	unsigned char clearBuffer[SCREENCOLUMNS];
 	unsigned char buffer[SCREENCOLUMNS];
 	unsigned short lineTab[SCREENLINES];
@@ -182,7 +184,6 @@ void setXEPXPos(unsigned char hpos) {
 		OS.iocb[0].command = 20;
 		cio(0);
 	}
-	screen.xepX = hpos;
 }
 
 void setXEPYPos(unsigned char y) {
@@ -192,7 +193,6 @@ void setXEPYPos(unsigned char y) {
 	OS.iocb[0].aux2 = XEP_SETCURSORVPOS + y;
 	OS.iocb[0].command = 20;
 	cio(0);
-	screen.xepY = y;
 }
 
 unsigned char isXep80Internal(void) {
@@ -228,6 +228,7 @@ void initScreen(void)
 	screen.burst = 0;
 	screen.origRMargn = OS.rmargn;
 	if (isXep80()) {
+		setBurstMode(1);
 		OS.colcrs = 0;
 		setXEPXPos(OS.colcrs);
 		OS.rowcrs = OS.lmargn;
@@ -235,6 +236,12 @@ void initScreen(void)
 		OS.rmargn = XEPRMARGIN;
 		setXEPRMargin(OS.rmargn);
 		screen.screenWidth = XEPRMARGIN - 1;
+		OS.iocb[0].buffer = eColon;
+		OS.iocb[0].buflen = 2;
+		OS.iocb[0].aux1 = 12;
+		OS.iocb[0].aux2 = XEP_CURSORON;
+		OS.iocb[0].command = 20;
+		cio(0);
 	}
 	screen.directDraw = directDrawTest();
 	drawClearScreen();
@@ -263,6 +270,7 @@ void setXEPLastChar(unsigned char c)
 	OS.dspflg = 1;
 	OS.rowcrs = XEPLINES-1;
 	OS.colcrs = XEPRMARGIN+1;
+	screen.xepX = OS.colcrs;screen.xepY = OS.rowcrs;
 	OS.iocb[0].buffer = &c;
 	OS.iocb[0].buflen = 1;
 	OS.iocb[0].command = IOCB_PUTCHR;
@@ -316,6 +324,7 @@ void setXepRowPtr(unsigned char y, unsigned char val) {
 void drawClearScreen(void)
 {
 	unsigned char y;
+	cursorHide();
 	flushBuffer();
 	if (isXep80()) {
 		OS.iocb[0].buffer = eColon;
@@ -342,37 +351,40 @@ void cursorHide(void)
 {
 	if (OS.crsinh) return;
 	OS.crsinh = 1;
-	if (isXep80()) {
+	if (isXep80()) { // XEP80 is insane in Burst mode. colcrs isn't updated, but it still checks colcrs to a hidden shadow when drawing
 		OS.iocb[0].buffer = eColon;
 		OS.iocb[0].buflen = 2;
 		OS.iocb[0].aux1 = 12;
 		OS.iocb[0].aux2 = XEP_CURSOROFF;
 		OS.iocb[0].command = 20;
 		cio(0);
+		setXEPXPos(OS.colcrs);
+		setXEPYPos(OS.rowcrs);
 	}
 }
 
 void cursorUpdate(unsigned char x, unsigned char y)
 {
-	static const unsigned char moveCursorUp = CH_CURS_UP;
+	unsigned char xp;
+	static const unsigned char moveCursorLeft = CH_CURS_LEFT;
 	if (x >= screen.screenWidth || y >= SCREENLINES) {
 		cursorHide();
 		return;
 	}
-	if ((OS.crsinh == 0) && (OS.colcrs == x + OS.lmargn) && (OS.rowcrs == y))return;
-	endBurstMode();
+	flushBuffer();
+	xp = x + OS.lmargn;
+	if (xp < OS.rmargn)xp++;
+	else xp = OS.lmargn;
+	if ((OS.crsinh == 0) && (OS.colcrs == xp) && (OS.rowcrs == y))return;
 	OS.crsinh = 0;
-	OS.colcrs = x + OS.lmargn;
+	OS.colcrs = xp;
 	OS.rowcrs = y;
 	OS.dspflg = 0;
-	if (OS.rowcrs +1 < SCREENLINES)OS.rowcrs++;
-	else OS.rowcrs = 0;
-	OS.iocb[0].buffer = &moveCursorUp;
+	screen.xepX = OS.colcrs;screen.xepY = OS.rowcrs;
+	OS.iocb[0].buffer = &moveCursorLeft;
 	OS.iocb[0].buflen = 1;
 	OS.iocb[0].command = IOCB_PUTCHR;
 	cio(0);
-	OS.colcrs = x + OS.lmargn;
-	OS.rowcrs = y;
 }
 
 
@@ -380,6 +392,7 @@ void drawCharsAt(unsigned char *buffer, unsigned char bufferLen, unsigned char x
 {
 	unsigned char logMapTouch = 0;
 	if ((x >= screen.screenWidth) || !bufferLen)return;
+	cursorHide();
 	if (x + bufferLen > screen.screenWidth)bufferLen = screen.screenWidth - x;
 	if (screen.directDraw) {
 		writeScreen(buffer, bufferLen, x, y);
@@ -389,7 +402,7 @@ void drawCharsAt(unsigned char *buffer, unsigned char bufferLen, unsigned char x
 	OS.rowcrs = y;
 	OS.colcrs = x;
 	if (isXep80()) {
-		setBurstMode(1);
+		screen.xepX = OS.colcrs;screen.xepY = OS.rowcrs;
 		OS.iocb[0].buffer = buffer;
 		OS.iocb[0].buflen = bufferLen;
 		OS.iocb[0].command = IOCB_PUTCHR;
@@ -423,13 +436,6 @@ void flushBuffer(void)
 	screen.bufferLen = 0;
 }
 
-void endBurstMode(void)
-{
-	if (isXep80()) {
-		setBurstMode(0);
-	}
-}
-
 void drawCharAt(unsigned char c, unsigned char attribute, unsigned char x, unsigned char y)
 {
 	if ((y >= SCREENLINES) || (x >= screen.screenWidth))return;
@@ -449,6 +455,7 @@ void drawClearCharsAt(unsigned char len, unsigned char x, unsigned char y)
 {
 	unsigned char oldLen;
 	if ((y >= SCREENLINES) || (x >= screen.screenWidth) || (x >= screen.lineLength[y]))return;
+	cursorHide();
 	if (y != screen.bufferY || x != screen.bufferX) flushBuffer();
 	oldLen = screen.lineLength[y];
 	if (len >= screen.screenWidth - x) {
@@ -456,19 +463,18 @@ void drawClearCharsAt(unsigned char len, unsigned char x, unsigned char y)
 		if (x < screen.lineLength[y])screen.lineLength[y] = x;
 	}
 	if (len > oldLen - x) len = oldLen - x;
-	OS.crsinh = 1;
 	drawCharsAt(screen.clearBuffer, len, x + OS.lmargn, y);
 }
 
 void drawClearLine(unsigned char y)
 {
 	static unsigned char ch = CH_INSLINE, chD = CH_DELLINE;
-	if (y >= SCREENLINES)return;
+	if ((y >= SCREENLINES) || !screen.lineLength[y])return;
 	if (isXep80()) {
 		drawClearCharsAt(screen.screenWidth - OS.lmargn, OS.lmargn, y);
 		return;
 	}
-	OS.crsinh = 1;
+	cursorHide();
 	OS.rowcrs = y;
 	OS.colcrs = OS.lmargn;
 	OS.dspflg = 0;
@@ -492,7 +498,6 @@ void drawInsertLine(unsigned char y, unsigned char yBottom)
 	if (isXep80()) {
 		drawClearLine(yBottom);
 		flushBuffer();
-		setBurstMode(1);
 		saveLine = screen.xepLines[yBottom];
 		for (yp = yBottom;yp > y;yp--) {
 			setXepRowPtr(yp, screen.xepLines[yp-1]);
@@ -500,7 +505,6 @@ void drawInsertLine(unsigned char y, unsigned char yBottom)
 		}
 		setXepRowPtr(y, saveLine);
 		screen.lineLength[y] = 0;
-		setBurstMode(0);
 		return;
 	}
 	flushBuffer();
@@ -508,9 +512,9 @@ void drawInsertLine(unsigned char y, unsigned char yBottom)
 		directScrollDown(y, yBottom);
 	} else {
 		OS.dspflg = 0;
-		OS.crsinh = 1;
 		OS.colcrs = OS.lmargn;
 		if (yBottom < SCREENLINES -1) {
+			cursorHide();
 			OS.rowcrs = yBottom;
 			OS.iocb[0].buffer = &chD;
 			OS.iocb[0].buflen =  1;
@@ -535,7 +539,6 @@ void drawDeleteLine(unsigned char y, unsigned char yBottom)
 	if (isXep80()) {
 		drawClearLine(y);
 		flushBuffer();
-		setBurstMode(1);
 		saveLine = screen.xepLines[y];
 		for (yp = y;yp +1 <= yBottom;yp++) {
 			setXepRowPtr(yp, screen.xepLines[yp+1]);
@@ -543,7 +546,6 @@ void drawDeleteLine(unsigned char y, unsigned char yBottom)
 		}
 		setXepRowPtr(yBottom, saveLine);
 		screen.lineLength[yBottom] = 0;
-		setBurstMode(0);
 
 		return;
 	}
@@ -551,7 +553,6 @@ void drawDeleteLine(unsigned char y, unsigned char yBottom)
 	if (screen.directDraw) {
 		directScrollUp(y, yBottom);
 	} else {
-		OS.crsinh = 1;
 		OS.dspflg = 0;
 		OS.rowcrs = y;
 		OS.colcrs = OS.lmargn;
@@ -560,6 +561,7 @@ void drawDeleteLine(unsigned char y, unsigned char yBottom)
 		OS.iocb[0].command = IOCB_PUTCHR;
 		cio(0);
 		if (yBottom < SCREENLINES - 1) { // Probably will blink but have no choice.
+			cursorHide();
 			OS.rowcrs = yBottom;
 			OS.iocb[0].buffer = &chI;
 			OS.iocb[0].buflen =  1;
@@ -584,6 +586,7 @@ void drawInsertChar(unsigned char x, unsigned char y)
 	OS.dspflg = 0;
 	OS.rowcrs = y;
 	OS.colcrs = OS.lmargn + x;
+	screen.xepX = OS.colcrs;screen.xepY = OS.rowcrs;
 	OS.iocb[0].buffer = &ch;
 	OS.iocb[0].buflen =  1;
 	OS.iocb[0].command = IOCB_PUTCHR;
@@ -602,6 +605,7 @@ void drawDeleteChar(unsigned char x, unsigned char y)
 	OS.dspflg = 0;
 	OS.rowcrs = y;
 	OS.colcrs = OS.lmargn + x;
+	screen.xepX = OS.colcrs;screen.xepY = OS.rowcrs;
 	OS.iocb[0].buffer = &ch;
 	OS.iocb[0].buflen =  1;
 	OS.iocb[0].command = IOCB_PUTCHR;
