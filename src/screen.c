@@ -474,7 +474,7 @@ void drawClearCharsAt(unsigned char len, unsigned char x, unsigned char y)
 	unsigned char oldLen;
 	if ((y >= SCREENLINES) || (x >= screen.screenWidth) || (x >= screen.lineLength[y]))return;
 	cursorHide();
-	if (y != screen.bufferY || x != screen.bufferX) flushBuffer();
+	flushBuffer();
 	oldLen = screen.lineLength[y];
 	if (len >= screen.screenWidth - x) {
 		len = screen.screenWidth - x;
@@ -489,7 +489,7 @@ void drawClearLine(unsigned char y)
 	static unsigned char ch = CH_INSLINE, chD = CH_DELLINE;
 	if ((y >= SCREENLINES) || !screen.lineLength[y])return;
 	if (isXep80()) {
-		drawClearCharsAt(screen.screenWidth - OS.lmargn, OS.lmargn, y);
+		drawClearCharsAt(screen.screenWidth - OS.lmargn, 0, y);
 		return;
 	}
 	cursorHide();
