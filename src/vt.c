@@ -60,6 +60,8 @@
 #define MODEP_DECPEX 19
 #define MODEP_SHOWCURSOR 25
 #define NUMMODEP 26
+
+#define SPECIALFLAG_LFWITHCR 1
 // This is, I think, secreat of VT102 emulation, I discover
 // https://github.com/mattiase/wraptest
 
@@ -88,6 +90,7 @@ struct vtScreenStruct {
 	unsigned char saveWrap, saveOriginMode;
 	unsigned char saveCharSetPick;
 	unsigned char saveLastColumn;
+	unsigned char specialFlags, prevChar;
 };
 
 escStructType esc = {0};
@@ -163,6 +166,7 @@ void resetVt(void)
 	vt.modeP[MODEP_DECANM] = 1; 
 	vt.mode[MODE_SRM] = 1; // Disable local echo
 	vt.modeP[MODEP_SHOWCURSOR] = 1;
+	vt.specialFlags = 0; // SPECIALFLAG_LFWITHCR; // APE needs this?  Why
 	cursorSave();
 	clearScreen(2);
 
@@ -958,11 +962,13 @@ void processChar(unsigned char c) {
 		case VT_LF:
 		case VT_VT:
 		case VT_FF:
+			if ((vt.specialFlags & SPECIALFLAG_LFWITHCR) && (vt.prevChar == VT_CR))break;
 			moveDown(1, 0); // and auto print
 			if (vt.mode[MODE_LNM]) vt.x = 0;
 			break;
 		case VT_CR:
 			vt.lastColumn = 0;
+			if (vt.specialFlags & SPECIALFLAG_LFWITHCR)moveDown(1, 0); // Why does R: with Ape need this?
 			vt.x = 0;
 			break;
 		case VT_SO:
@@ -1045,7 +1051,7 @@ void processChar(unsigned char c) {
 			}
 		}
 	}
-
+	vt.prevChar = c;
 }
 
 void processChars(unsigned char *s, unsigned char len)

@@ -18,10 +18,12 @@
 
 typedef struct serialDataStruct serialStruct;
 #define RBUFFERSIZE 0x2000
+#define READBUFFERLEN 255
 struct serialDataStruct {
-	unsigned char buffer[RBUFFERSIZE];
-	unsigned char readBuffer[RBUFFERSIZE];
+	unsigned char *buffer;
+	unsigned char readBuffer[READBUFFERLEN];
 	unsigned char baudWordStop, xlat;
+	unsigned char rts;
 };
 
 serialStruct serial;
@@ -115,6 +117,10 @@ unsigned char serialClose(unsigned char *device, unsigned char deviceLen)
 	OS.iocb[3].command = IOCB_CLOSE;
 	cio(3);
 	iocbErrUpdate(3, &err);
+	if (serial.buffer) {
+		free(serial.buffer);
+		serial.buffer = NULL;
+	}
 	return err;
 }
 
@@ -141,7 +147,10 @@ unsigned char serialOpen(unsigned char *device, unsigned char deviceLen, unsigne
 	cio(3);
 	iocbErrUpdate(3, &err);
 	if (err != ERR_NONE)return err;
-
+	serial.buffer = malloc(RBUFFERSIZE);
+	if (!serial.buffer) {
+		return ERR_OUTOFMEMORY;
+	}
 	OS.iocb[3].buffer = serial.buffer;
 	OS.iocb[3].buflen = RBUFFERSIZE;
 	OS.iocb[3].aux1 = IOCB_READBIT|IOCB_WRITEBIT|IOCB_CONCURRENTBIT;
@@ -149,6 +158,7 @@ unsigned char serialOpen(unsigned char *device, unsigned char deviceLen, unsigne
 	OS.iocb[3].command = IOCB_CONCURRENT;
 	cio(3);
 	iocbErrUpdate(3, &err);
+	serial.rts = 1;
 	return err;
 }
 
@@ -164,8 +174,19 @@ unsigned char readData(void) {
 		if (err != ERR_NONE) break;;
 		inputReady = * (unsigned short *) &OS.dvstat[1];
 		outputWaiting = OS.dvstat[3];
-		if (!inputReady) break;
 
+		if (inputReady >= ((RBUFFERSIZE * 3) >> 2)) {
+			if (serial.rts) {
+				serial.rts = 0;
+				sendSerialResponse("\023", 1);
+			}
+		} else {
+			if (!serial.rts) {
+				serial.rts = 1;
+				sendSerialResponse("\021", 1);
+			}
+		}
+		if (!inputReady) break;
 		readLen = inputReady < sizeof(serial.readBuffer)? inputReady: sizeof(serial.readBuffer);
 		OS.iocb[3].buffer = serial.readBuffer;
 		OS.iocb[3].buflen = readLen;
@@ -175,7 +196,7 @@ unsigned char readData(void) {
 		if (err != ERR_NONE) break;
 		for (n = 0;n < readLen;n++) {
 			decodeUtf8Char(serial.readBuffer[n]);
-		} 
+		}
 	}
 	return err;
 }
