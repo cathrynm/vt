@@ -17,7 +17,7 @@
 
 
 typedef struct serialDataStruct serialStruct;
-#define RBUFFERSIZE 255
+#define RBUFFERSIZE 0x2000
 struct serialDataStruct {
 	unsigned char buffer[RBUFFERSIZE];
 	unsigned char readBuffer[RBUFFERSIZE];
@@ -154,7 +154,8 @@ unsigned char serialOpen(unsigned char *device, unsigned char deviceLen, unsigne
 
 
 unsigned char readData(void) {
-	unsigned char err = ERR_NONE, n;
+	unsigned char err = ERR_NONE;
+	unsigned short n;
 	unsigned short readLen, inputReady;unsigned char outputWaiting;
 	for (;;) { // Just keep going until drained.
 		OS.iocb[3].command = IOCB_STATIS;

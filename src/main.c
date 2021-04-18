@@ -17,7 +17,7 @@ void main(int argc, char **argv)
 	initChio();
 	initScreen();
 	resetVt();
-	err = serialOpen("R:", strlen("R:"), BAUD_19200, 0);
+	err = serialOpen("R:", strlen("R:"), BAUD_9600, 0);
 	for(;err == ERR_NONE;) {
 		flushBuffer();
 		fixCursor();

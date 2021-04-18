@@ -1,5 +1,6 @@
 
 #include "main.h"
+#include <string.h>
 
 #define XEPLINES 25
 #define SCREENLINES 24
@@ -41,6 +42,54 @@ void writeScreen(unsigned char *s, unsigned char len, unsigned char x, unsigned 
 	}
 	if (((unsigned short) OS.oldadr >= (unsigned short) pStart)  && 
 		 ((unsigned short) OS.oldadr < (unsigned short) p)) {
+		OS.oldchr = pStart[(unsigned short)OS.oldadr - (unsigned short)pStart];
+	}
+}
+
+
+void directScrollUp(unsigned char topY, unsigned char bottomY)
+{
+	unsigned char y, len;
+	unsigned char *p, *pStart, *pEnd, *pBottom;
+	pStart = OS.savmsc + screen.lineTab[topY];
+	pBottom =  OS.savmsc + screen.lineTab[bottomY];
+	pEnd = pBottom + screen.screenWidth;
+	if (((unsigned short) OS.oldadr >= (unsigned short) pStart)  && 
+		 ((unsigned short) OS.oldadr < (unsigned short) pEnd)) {
+		pStart[(unsigned short)OS.oldadr - (unsigned short)pStart] = OS.oldchr;
+	}
+	if (bottomY > topY) {
+		// memmove(pStart, &pStart[screen.screenWidth], screen.lineTab[bottomY - topY]);
+		p = pStart;
+		for (y = topY;y+1 <= bottomY;y++, p += screen.screenWidth) {
+			len = (screen.lineLength[y] > screen.lineLength[y+1])? screen.lineLength[y]: screen.lineLength[y+1];
+			if (len > 0)memcpy(p, &p[screen.screenWidth], len);
+		}
+	}
+	if (screen.lineLength[bottomY] > 0)
+		memset(pBottom, 0, screen.lineLength[bottomY]);
+	if (((unsigned short) OS.oldadr >= (unsigned short) pStart)  && 
+		 ((unsigned short) OS.oldadr < (unsigned short) pEnd)) {
+		OS.oldchr = pStart[(unsigned short)OS.oldadr - (unsigned short)pStart];
+	}
+}
+
+void directScrollDown(unsigned char topY, unsigned char bottomY)
+{
+	unsigned char *pStart, *pEnd;
+	pStart = OS.savmsc + screen.lineTab[topY];
+	pEnd =  OS.savmsc + screen.lineTab[bottomY] + screen.screenWidth;
+	if (((unsigned short) OS.oldadr >= (unsigned short) pStart)  && 
+		 ((unsigned short) OS.oldadr < (unsigned short) pEnd)) {
+		pStart[(unsigned short)OS.oldadr - (unsigned short)pStart] = OS.oldchr;
+	}
+	if (bottomY > topY) {
+		 memmove(&pStart[screen.screenWidth], pStart, screen.lineTab[bottomY - topY]);
+	}
+	if (screen.lineLength[topY] > 0)
+		memset(pStart, 0, screen.lineLength[topY]);
+	if (((unsigned short) OS.oldadr >= (unsigned short) pStart)  && 
+		 ((unsigned short) OS.oldadr < (unsigned short) pEnd)) {
 		OS.oldchr = pStart[(unsigned short)OS.oldadr - (unsigned short)pStart];
 	}
 }
@@ -455,21 +504,25 @@ void drawInsertLine(unsigned char y, unsigned char yBottom)
 		return;
 	}
 	flushBuffer();
-	OS.dspflg = 0;
-	OS.crsinh = 1;
-	OS.colcrs = OS.lmargn;
-	if (yBottom < SCREENLINES -1) {
-		OS.rowcrs = yBottom;
-		OS.iocb[0].buffer = &chD;
+	if (screen.directDraw) {
+		directScrollDown(y, yBottom);
+	} else {
+		OS.dspflg = 0;
+		OS.crsinh = 1;
+		OS.colcrs = OS.lmargn;
+		if (yBottom < SCREENLINES -1) {
+			OS.rowcrs = yBottom;
+			OS.iocb[0].buffer = &chD;
+			OS.iocb[0].buflen =  1;
+			OS.iocb[0].command = IOCB_PUTCHR;
+			cio(0);
+		}
+		OS.rowcrs = y;
+		OS.iocb[0].buffer = &ch;
 		OS.iocb[0].buflen =  1;
 		OS.iocb[0].command = IOCB_PUTCHR;
 		cio(0);
 	}
-	OS.rowcrs = y;
-	OS.iocb[0].buffer = &ch;
-	OS.iocb[0].buflen =  1;
-	OS.iocb[0].command = IOCB_PUTCHR;
-	cio(0);
 	for (yp = yBottom;yp > y;yp--) screen.lineLength[yp] = screen.lineLength[yp-1];
 	screen.lineLength[y] = 0;
 }
@@ -478,6 +531,7 @@ void drawDeleteLine(unsigned char y, unsigned char yBottom)
 {
 	unsigned char saveLine, yp;
 	static unsigned char ch = CH_DELLINE, chI = CH_INSLINE;
+
 	if (isXep80()) {
 		drawClearLine(y);
 		flushBuffer();
@@ -494,20 +548,24 @@ void drawDeleteLine(unsigned char y, unsigned char yBottom)
 		return;
 	}
 	flushBuffer();
-	OS.crsinh = 1;
-	OS.dspflg = 0;
-	OS.rowcrs = y;
-	OS.colcrs = OS.lmargn;
-	OS.iocb[0].buffer = &ch;
-	OS.iocb[0].buflen =  1;
-	OS.iocb[0].command = IOCB_PUTCHR;
-	cio(0);
-	if (yBottom < SCREENLINES - 1) { // Probably will blink but have no choice.
-		OS.rowcrs = yBottom;
-		OS.iocb[0].buffer = &chI;
+	if (screen.directDraw) {
+		directScrollUp(y, yBottom);
+	} else {
+		OS.crsinh = 1;
+		OS.dspflg = 0;
+		OS.rowcrs = y;
+		OS.colcrs = OS.lmargn;
+		OS.iocb[0].buffer = &ch;
 		OS.iocb[0].buflen =  1;
 		OS.iocb[0].command = IOCB_PUTCHR;
 		cio(0);
+		if (yBottom < SCREENLINES - 1) { // Probably will blink but have no choice.
+			OS.rowcrs = yBottom;
+			OS.iocb[0].buffer = &chI;
+			OS.iocb[0].buflen =  1;
+			OS.iocb[0].command = IOCB_PUTCHR;
+			cio(0);
+		}
 	}
 	for (yp = y;yp+1 <= yBottom;yp++) screen.lineLength[yp] = screen.lineLength[yp+1];
 	screen.lineLength[yBottom] = 0;
