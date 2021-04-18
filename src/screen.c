@@ -445,19 +445,7 @@ void drawClearCharsAt(unsigned char len, unsigned char x, unsigned char y)
 
 void drawClearLine(unsigned char y)
 {
-	static unsigned char ch = CH_INSLINE, chD = CH_DELLINE;
-	if ((y >= SCREENLINES) || !screen.lineLength[y])return;
-	if (isXep80()) {
-		drawClearCharsAt(screen.screenWidth - OS.lmargn, 0, y);
-		return;
-	}
-	cursorHide();
-	OS.rowcrs = y;
-	OS.colcrs = OS.lmargn;
-	OS.dspflg = 0;
-	callEColonPutByte(chD);
-	callEColonPutByte(ch);
-	screen.lineLength[y] = 0;
+	drawClearCharsAt(screen.screenWidth - OS.lmargn, 0, y);
 }
 
 
