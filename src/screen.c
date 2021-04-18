@@ -27,6 +27,8 @@ struct screenDataStruct {
 	unsigned short lineTab[SCREENLINES];
 	unsigned char xepLines[XEPLINES];
 	unsigned char lineLength[XEPLINES];
+	void (*eColonPutByte)(void);
+	void (*eColonSpecial)(void);
 };
 
 screenStruct screen;
@@ -107,15 +109,27 @@ unsigned char iocbErrUpdate(unsigned char iocb, unsigned char *oldErr)
 	return errUpdate(OS.iocb[iocb].status, oldErr);
 }
 
+void callEColonSpecial(unsigned char command, unsigned char aux1, unsigned char aux2)
+{
+	if (!screen.eColonSpecial) {
+		OS.iocb[0].buffer = eColon;
+		OS.iocb[0].buflen = 2;
+		OS.iocb[0].aux1 = aux1;
+		OS.iocb[0].aux2 = aux2;
+		OS.iocb[0].command = command;
+		cio(0);
+	} else {
+		OS.ziocb.command = command;
+		OS.ziocb.aux1 = aux1;
+		OS.ziocb.aux2 = aux2;
+		screen.eColonSpecial();
+	}
+}
+
 void setBurstMode(unsigned char on)
 {
 	if (screen.burst == on)return;
-	OS.iocb[0].buffer = NULL;
-	OS.iocb[0].buflen = 0;
-	OS.iocb[0].command = 0x15;
-	OS.iocb[0].aux1 = 0xc;
-	OS.iocb[0].aux2 = on;
-	cio(0);
+	callEColonSpecial(0x15, 0xc, on);
 	screen.burst = on;
 }
 
@@ -146,54 +160,26 @@ void setXEPRMargin(unsigned char x) {
 	OS.iocb[0].buffer = eColon;
 	OS.iocb[0].buflen = 2;
 	if ((x >= 0x40) && (x < 0x50)) {
-		OS.iocb[0].aux1 = 12;
-		OS.iocb[0].aux2 = XEP_SETRIGHTMARGINLO | (x-0x40); // Set to low 4 bits
-		OS.iocb[0].command = 20;
-		cio(0);
+		callEColonSpecial(20, 0xc, XEP_SETRIGHTMARGINLO | (x-0x40));
 	} else {
-		OS.iocb[0].aux1 = 12;
-		OS.iocb[0].aux2 = XEP_SETRIGHTMARGINLO | (x & 0xf); // Set to low 4 bits
-		OS.iocb[0].command = 20;
-		cio(0);
-		OS.iocb[0].aux1 = 12;
-		OS.iocb[0].aux2 = XEP_SETRIGHTMARGINHI + (x >> 4);
-		OS.iocb[0].command = 20;
-		cio(0);
+		callEColonSpecial(20, 0xc, XEP_SETRIGHTMARGINLO | (x & 0xf));
+		callEColonSpecial(20, 0xc, XEP_SETRIGHTMARGINHI + (x >> 4));
 	}
 }
 
+
 void setXEPXPos(unsigned char hpos) {
 	if (hpos < 80) {
-		OS.iocb[0].buffer = eColon;
-		OS.iocb[0].buflen = 2;
-		OS.iocb[0].aux1 = 12;
-		OS.iocb[0].aux2 = XEP_SETCURSORHPOS | hpos; // Set to low 4 bits
-		OS.iocb[0].command = 20;
-		cio(0);
+		callEColonSpecial(20, 12, XEP_SETCURSORHPOS | hpos);
 	} else {
-		OS.iocb[0].buffer = eColon;
-		OS.iocb[0].buflen = 2;
-		OS.iocb[0].aux1 = 12;
-		OS.iocb[0].aux2 = XEP_SETCURSORHPOS | (hpos & 0xf); // Set to low 4 bits
-		OS.iocb[0].command = 20;
-		cio(0);
-		OS.iocb[0].buffer = eColon;
-		OS.iocb[0].buflen = 2;
-		OS.iocb[0].aux1 = 12;
-		OS.iocb[0].aux2 = XEP_SETCURSORHPOSHI + (hpos >> 4);
-		OS.iocb[0].command = 20;
-		cio(0);
+		callEColonSpecial(20, 12, XEP_SETCURSORHPOS | (hpos & 0xf));
+		callEColonSpecial(20, 12, XEP_SETCURSORHPOSHI + (hpos >> 4));
 	}
 	screen.currentXepX = hpos;
 }
 
 void setXEPYPos(unsigned char y) {
-	OS.iocb[0].buffer = eColon;
-	OS.iocb[0].buflen = 2;
-	OS.iocb[0].aux1 = 12;
-	OS.iocb[0].aux2 = XEP_SETCURSORVPOS + y;
-	OS.iocb[0].command = 20;
-	cio(0);
+	callEColonSpecial(20, 12, XEP_SETCURSORVPOS + y);
 }
 
 unsigned char isXep80Internal(void) {
@@ -204,22 +190,17 @@ unsigned char setXepCharSet(unsigned char which)
 {
 	unsigned char err = ERR_NONE;
 	if (!isXep80() || (which == screen.xepCharset))return err;
-	OS.iocb[0].buffer = eColon;
-	OS.iocb[0].buflen = strlen(eColon);
-	OS.iocb[0].aux1 = 12;
-	OS.iocb[0].aux2 = which;
-	OS.iocb[0].command = 20;
-	cio(0);
-	iocbErrUpdate(0, &err);
-	if (err == ERR_NONE) {
-		screen.xepCharset = which;
-		setFullAscii((which == XEPCH_INTERN)); 
-	}
+	callEColonSpecial(20, 12, which);
+	screen.xepCharset = which;
+	setFullAscii((which == XEPCH_INTERN));
 	return err;
 }
 
+
+
 void initScreen(void)
 {
+	devhdl_t *devhdl;
 	unsigned char n;
 	for (n = 0;n < sizeof(screen.clearBuffer);n++)screen.clearBuffer[n] = ' ';
 	screen.screenWidth = OS.rmargn + 1; 
@@ -228,7 +209,15 @@ void initScreen(void)
 	screen.bufferY = 0;
 	screen.burst = 0;
 	screen.origRMargn = OS.rmargn;
+	for (n = 0;n < 11;n++) {
+		if (OS.hatabs[n].id != 'E')continue;
+		devhdl = OS.hatabs[n].devhdl;
+		screen.eColonPutByte = (void (*)(void)) ( (unsigned short) devhdl->put  + 1);
+		screen.eColonSpecial =  (void (*)(void)) ( (unsigned short) devhdl->special + 1);
+		break;
+	}
 	if (isXep80()) {
+
 		setBurstMode(1);
 		OS.colcrs = 0;
 		setXEPXPos(OS.colcrs);
@@ -239,12 +228,7 @@ void initScreen(void)
 		screen.xepX = OS.colcrs;
 		screen.currentXepX = screen.xepX;
 		screen.screenWidth = XEPRMARGIN - 1;
-		OS.iocb[0].buffer = eColon;
-		OS.iocb[0].buflen = 2;
-		OS.iocb[0].aux1 = 12;
-		OS.iocb[0].aux2 = XEP_CURSORON;
-		OS.iocb[0].command = 20;
-		cio(0);
+		callEColonSpecial(20, 12, XEP_CURSORON);		
 	}
 	screen.directDraw = directDrawTest();
 	drawClearScreen();
@@ -303,12 +287,7 @@ void setXEPLastChar(unsigned char c)
 void setXEPCommand(unsigned char c, unsigned char command)
 {
 	setXEPLastChar(c);
-	OS.iocb[0].buffer = eColon;
-	OS.iocb[0].buflen = 2;
-	OS.iocb[0].aux1 = 12;
-	OS.iocb[0].aux2 = command;
-	OS.iocb[0].command = 20;
-	cio(0);
+	callEColonSpecial(20, 12, command);
 }
 
 void setXEPExtraByte(unsigned char c)
@@ -322,23 +301,13 @@ void drawXEPCharAt(unsigned char c, unsigned char x, unsigned char y)
 	setXEPLastChar(c);
 	setXEPXPos(x);
 	setXEPYPos(y);
-	OS.iocb[0].buffer = eColon;
-	OS.iocb[0].buflen = 2;
-	OS.iocb[0].aux1 = 12;
-	OS.iocb[0].aux2 = XEP_WRITEBYTE;
-	OS.iocb[0].command = 20;
-	cio(0);
+	callEColonSpecial(20, 12, XEP_WRITEBYTE);
 }
 
 void setXepRowPtr(unsigned char y, unsigned char val) {
 	setXEPExtraByte(y + 0x20);
 	setXEPLastChar(val);
-	OS.iocb[0].buffer = eColon;
-	OS.iocb[0].buflen = 2;
-	OS.iocb[0].aux1 = 12;
-	OS.iocb[0].aux2 = XEP_WRITEINTERNALBYTE;
-	OS.iocb[0].command = 20;
-	cio(0);
+	callEColonSpecial(20, 12, XEP_WRITEINTERNALBYTE);
 	screen.xepLines[y] = val;
 }
 
@@ -348,12 +317,7 @@ void drawClearScreen(void)
 	cursorHide();
 	flushBuffer();
 	if (isXep80()) {
-		OS.iocb[0].buffer = eColon;
-		OS.iocb[0].buflen = strlen(eColon);
-		OS.iocb[0].aux1 = 12;
-		OS.iocb[0].aux2 = isXep80Internal()? XEP_FILLSPACE:XEP_FILLEOL;
-		OS.iocb[0].command = 20;
-		cio(0);
+		callEColonSpecial(20, 0xc, isXep80Internal()? XEP_FILLSPACE:XEP_FILLEOL);
 		screen.fillFlag = isXep80Internal()? 0x40: (isIntl()? 0x20: 0x00);
 		for (y = 0;y<XEPLINES;y++)setXepRowPtr(y, screen.fillFlag| y);
 	} else {
