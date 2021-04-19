@@ -98,17 +98,6 @@ void directScrollDown(unsigned char topY, unsigned char bottomY)
 	}
 }
 
-unsigned char errUpdate(unsigned char err, unsigned char *oldErr)
-{
-	if (((*oldErr == ERR_NONE) || (*oldErr == ERR_ENDOFFILE)) && (err != ERR_NONE))*oldErr = err;
-	return *oldErr;
-}
-
-unsigned char iocbErrUpdate(unsigned char iocb, unsigned char *oldErr)
-{
-	return errUpdate(OS.iocb[iocb].status, oldErr);
-}
-
 void callEColonSpecial(unsigned char command, unsigned char aux1, unsigned char aux2)
 {
 	if (!screen.eColonSpecial) {

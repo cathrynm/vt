@@ -1061,7 +1061,8 @@ void processChars(unsigned char *s, unsigned char len)
 
 void sendResponse(unsigned char *s, unsigned char len)
 {
+	unsigned char err = ERR_NONE;
 	if (!vt.mode[MODE_SRM])
 		processChars(s, len);
-	sendSerialResponse(s, len);
+	sendSerialResponse(s, len, &err);
 }

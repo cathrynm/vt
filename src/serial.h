@@ -67,12 +67,14 @@
 #define RXLAT_NOLF 0
 #define RXLAT_APPENDLF 64
 
-void sendSerialResponse(unsigned char *s, unsigned char len);
-unsigned char serialOpen(unsigned char *device, unsigned char deviceLen, unsigned char baudWordStop, unsigned char mon);
-unsigned char serialClose(unsigned char *device, unsigned char deviceLen);
-unsigned char readData(void);
+void sendSerialResponse(unsigned char *s, unsigned char len, unsigned char *err);
+void serialOpen(unsigned char *device, unsigned char deviceLen, unsigned char baudWordStop, unsigned char mon, unsigned char *err);
+void serialClose(unsigned char *device, unsigned char deviceLen, unsigned char *err);
 unsigned short getBaud(void);
 unsigned char getBits(void);
 unsigned char getParity(void);
+unsigned short serialStatus(unsigned char *err);
+void serialFlow(unsigned short inputReady, unsigned char *err);
+void serialRead(unsigned char *data, unsigned short len, unsigned char *err);
 
 #endif

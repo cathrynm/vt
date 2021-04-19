@@ -1,7 +1,5 @@
 #include "main.h"
 
-
-
 #define cio(iocb)			\
 	(__AX__ = (iocb),		\
 	__asm__ ("asl"),		\
@@ -14,14 +12,11 @@
 	__asm__ ("ldx #0"),   \
 	__AX__)
 
-
-
+#define IOCB_SERIAL 3
 typedef struct serialDataStruct serialStruct;
 #define RBUFFERSIZE 0x2000
-#define READBUFFERLEN 255
 struct serialDataStruct {
 	unsigned char *buffer;
-	unsigned char readBuffer[READBUFFERLEN];
 	unsigned char baudWordStop, xlat;
 	unsigned char rts;
 };
@@ -69,145 +64,135 @@ unsigned char getParity(void)
 
 unsigned char controlLines(unsigned char *device, unsigned char deviceLen, unsigned char aux1) {
 	unsigned char err = ERR_NONE;
-	OS.iocb[3].buffer = device;
-	OS.iocb[3].buflen = deviceLen;
-	OS.iocb[3].aux1 = aux1;
-	OS.iocb[3].aux2 = 0;
-	OS.iocb[3].command = IOCB_CONTROLLINES;
-	cio(3);
-	iocbErrUpdate(3, &err);
+	OS.iocb[IOCB_SERIAL].buffer = device;
+	OS.iocb[IOCB_SERIAL].buflen = deviceLen;
+	OS.iocb[IOCB_SERIAL].aux1 = aux1;
+	OS.iocb[IOCB_SERIAL].aux2 = 0;
+	OS.iocb[IOCB_SERIAL].command = IOCB_CONTROLLINES;
+	cio(IOCB_SERIAL);
+	iocbErrUpdate(IOCB_SERIAL, &err);
 	return err;
 }
 
-unsigned char serialXlat(unsigned char *device, unsigned char deviceLen, unsigned char aux1, unsigned char wontTranslate)
+void serialXlat(unsigned char *device, unsigned char deviceLen, unsigned char aux1, unsigned char wontTranslate, unsigned char *err)
 {
-	unsigned char err = ERR_NONE;
-	OS.iocb[3].buffer = device;
-	OS.iocb[3].buflen = deviceLen;
-	OS.iocb[3].aux1 = aux1;
-	OS.iocb[3].aux2 = wontTranslate;
-	OS.iocb[3].command = IOCB_XLAT;
+	OS.iocb[IOCB_SERIAL].buffer = device;
+	OS.iocb[IOCB_SERIAL].buflen = deviceLen;
+	OS.iocb[IOCB_SERIAL].aux1 = aux1;
+	OS.iocb[IOCB_SERIAL].aux2 = wontTranslate;
+	OS.iocb[IOCB_SERIAL].command = IOCB_XLAT;
 	serial.xlat = aux1;
-	cio(3);
-	iocbErrUpdate(3, &err);
-	return err;
+	cio(IOCB_SERIAL);
+	iocbErrUpdate(IOCB_SERIAL, err);
 }
-
 
 unsigned char serialFlush(unsigned char *device, unsigned char deviceLen)
 {
 	unsigned char err = ERR_NONE;
-	OS.iocb[3].buffer = device;
-	OS.iocb[3].buflen = deviceLen;
-	OS.iocb[3].aux1 = 0;
-	OS.iocb[3].aux2 = 0;
-	OS.iocb[3].command = IOCB_FLUSH;
-	cio(3);
-	iocbErrUpdate(3, &err);
+	OS.iocb[IOCB_SERIAL].buffer = device;
+	OS.iocb[IOCB_SERIAL].buflen = deviceLen;
+	OS.iocb[IOCB_SERIAL].aux1 = 0;
+	OS.iocb[IOCB_SERIAL].aux2 = 0;
+	OS.iocb[IOCB_SERIAL].command = IOCB_FLUSH;
+	cio(IOCB_SERIAL);
+	iocbErrUpdate(IOCB_SERIAL, &err);
 	return err;
 }
 
-unsigned char serialClose(unsigned char *device, unsigned char deviceLen)
+void serialClose(unsigned char *device, unsigned char deviceLen, unsigned char *err)
 {
-	unsigned char err = ERR_NONE; // I think not required to flush before close.
-	OS.iocb[3].buffer = device;
-	OS.iocb[3].buflen = deviceLen;
-	OS.iocb[3].aux1 = 0;
-	OS.iocb[3].aux2 = 0;
-	OS.iocb[3].command = IOCB_CLOSE;
-	cio(3);
-	iocbErrUpdate(3, &err);
+	OS.iocb[IOCB_SERIAL].buffer = device;
+	OS.iocb[IOCB_SERIAL].buflen = deviceLen;
+	OS.iocb[IOCB_SERIAL].aux1 = 0;
+	OS.iocb[IOCB_SERIAL].aux2 = 0;
+	OS.iocb[IOCB_SERIAL].command = IOCB_CLOSE;
+	cio(IOCB_SERIAL);
+	iocbErrUpdate(IOCB_SERIAL, err);
 	if (serial.buffer) {
 		free(serial.buffer);
 		serial.buffer = NULL;
 	}
-	return err;
 }
 
 
-unsigned char serialOpen(unsigned char *device, unsigned char deviceLen, unsigned char baudWordStop, unsigned char mon)
+void serialOpen(unsigned char *device, unsigned char deviceLen, unsigned char baudWordStop, unsigned char mon, unsigned char *err)
 {
-	unsigned char err = ERR_NONE;
 	serial.baudWordStop = baudWordStop;
-	OS.iocb[3].buffer = device;
-	OS.iocb[3].buflen = deviceLen;
-	OS.iocb[3].aux1 = baudWordStop;
-	OS.iocb[3].aux2 = mon;
-	OS.iocb[3].command = IOCB_BAUDMON;
-	cio(3);
-	iocbErrUpdate(3, &err);
-	if (err != ERR_NONE)return err;
-	err = serialXlat(device, deviceLen, RXLAT_NOXLAT, 0);
-	if (err != ERR_NONE)return err;
-	OS.iocb[3].buffer = device;
-	OS.iocb[3].buflen = deviceLen;
-	OS.iocb[3].aux1 = IOCB_READBIT|IOCB_WRITEBIT|IOCB_CONCURRENTBIT;
-	OS.iocb[3].aux2 = 0;
-	OS.iocb[3].command = IOCB_OPEN;
-	cio(3);
-	iocbErrUpdate(3, &err);
-	if (err != ERR_NONE)return err;
+	OS.iocb[IOCB_SERIAL].buffer = device;
+	OS.iocb[IOCB_SERIAL].buflen = deviceLen;
+	OS.iocb[IOCB_SERIAL].aux1 = baudWordStop;
+	OS.iocb[IOCB_SERIAL].aux2 = mon;
+	OS.iocb[IOCB_SERIAL].command = IOCB_BAUDMON;
+	cio(IOCB_SERIAL);
+	iocbErrUpdate(IOCB_SERIAL, err);
+	if (*err != ERR_NONE)return;
+	serialXlat(device, deviceLen, RXLAT_NOXLAT, 0, err);
+	if (*err != ERR_NONE)return;
+	OS.iocb[IOCB_SERIAL].buffer = device;
+	OS.iocb[IOCB_SERIAL].buflen = deviceLen;
+	OS.iocb[IOCB_SERIAL].aux1 = IOCB_READBIT|IOCB_WRITEBIT|IOCB_CONCURRENTBIT;
+	OS.iocb[IOCB_SERIAL].aux2 = 0;
+	OS.iocb[IOCB_SERIAL].command = IOCB_OPEN;
+	cio(IOCB_SERIAL);
+	iocbErrUpdate(IOCB_SERIAL, err);
+	if (*err != ERR_NONE)return;
 	serial.buffer = malloc(RBUFFERSIZE);
 	if (!serial.buffer) {
-		return ERR_OUTOFMEMORY;
+		*err = ERR_OUTOFMEMORY;
+		serialClose(device, deviceLen, err);
+		return;
 	}
-	OS.iocb[3].buffer = serial.buffer;
-	OS.iocb[3].buflen = RBUFFERSIZE;
-	OS.iocb[3].aux1 = IOCB_READBIT|IOCB_WRITEBIT|IOCB_CONCURRENTBIT;
-	OS.iocb[3].aux2 = 0;
-	OS.iocb[3].command = IOCB_CONCURRENT;
-	cio(3);
-	iocbErrUpdate(3, &err);
+	OS.iocb[IOCB_SERIAL].buffer = serial.buffer;
+	OS.iocb[IOCB_SERIAL].buflen = RBUFFERSIZE;
+	OS.iocb[IOCB_SERIAL].aux1 = IOCB_READBIT|IOCB_WRITEBIT|IOCB_CONCURRENTBIT;
+	OS.iocb[IOCB_SERIAL].aux2 = 0;
+	OS.iocb[IOCB_SERIAL].command = IOCB_CONCURRENT;
+	cio(IOCB_SERIAL);
+	iocbErrUpdate(IOCB_SERIAL, err);
+	if (*err != ERR_NONE) {
+		serialClose(device, deviceLen, err);
+	}
 	serial.rts = 1;
-	return err;
 }
 
+unsigned short serialStatus(unsigned char *err)
+{
+	OS.iocb[IOCB_SERIAL].command = IOCB_STATIS;
+	cio(IOCB_SERIAL);
+	iocbErrUpdate(IOCB_SERIAL, err);
+	if (*err != ERR_NONE) return 0;
+	return * (unsigned short *) &OS.dvstat[1];
+}
 
-unsigned char readData(void) {
-	unsigned char err = ERR_NONE;
-	unsigned short n;
-	unsigned short readLen, inputReady;unsigned char outputWaiting;
-	for (;;) { // Just keep going until drained.
-		OS.iocb[3].command = IOCB_STATIS;
-		cio(3);
-		iocbErrUpdate(3, &err);
-		if (err != ERR_NONE) break;;
-		inputReady = * (unsigned short *) &OS.dvstat[1];
-		outputWaiting = OS.dvstat[3];
-
-		if (inputReady >= ((RBUFFERSIZE * 3) >> 2)) {
-			if (serial.rts) {
-				serial.rts = 0;
-				sendSerialResponse("\023", 1);
-			}
-		} else {
-			if (!serial.rts) {
-				serial.rts = 1;
-				sendSerialResponse("\021", 1);
-			}
+void serialFlow(unsigned short inputReady, unsigned char *err)
+{		
+	if (inputReady >= ((RBUFFERSIZE * 3) >> 2)) {
+		if (serial.rts) {
+			serial.rts = 0;
+			sendSerialResponse("\023", 1, err);
 		}
-		if (!inputReady) break;
-		readLen = inputReady < sizeof(serial.readBuffer)? inputReady: sizeof(serial.readBuffer);
-		OS.iocb[3].buffer = serial.readBuffer;
-		OS.iocb[3].buflen = readLen;
-		OS.iocb[3].command = IOCB_GETCHR;
-		cio(3);
-		iocbErrUpdate(3, &err);
-		if (err != ERR_NONE) break;
-		for (n = 0;n < readLen;n++) {
-			decodeUtf8Char(serial.readBuffer[n]);
+	} else {
+		if (!serial.rts) {
+			serial.rts = 1;
+			sendSerialResponse("\021", 1, err);
 		}
 	}
-	return err;
 }
 
-
-void sendSerialResponse(unsigned char *s, unsigned char len)
+void serialRead(unsigned char *data, unsigned short len, unsigned char *err)
 {
-	unsigned char err = ERR_NONE;
-	OS.iocb[3].buffer = s;
-	OS.iocb[3].buflen = len;
-	OS.iocb[3].command = IOCB_PUTCHR;
-	cio(3);
-	iocbErrUpdate(3, &err);
+	OS.iocb[IOCB_SERIAL].buffer = data;
+	OS.iocb[IOCB_SERIAL].buflen = len;
+	OS.iocb[IOCB_SERIAL].command = IOCB_GETCHR;
+	cio(IOCB_SERIAL);
+	iocbErrUpdate(IOCB_SERIAL, err);
+}
+
+void sendSerialResponse(unsigned char *s, unsigned char len, unsigned char *err)
+{
+	OS.iocb[IOCB_SERIAL].buffer = s;
+	OS.iocb[IOCB_SERIAL].buflen = len;
+	OS.iocb[IOCB_SERIAL].command = IOCB_PUTCHR;
+	cio(IOCB_SERIAL);
+	iocbErrUpdate(IOCB_SERIAL, err);
 }

@@ -17,7 +17,7 @@ void main(int argc, char **argv)
 	initChio();
 	initScreen();
 	resetVt();
-	err = serialOpen("R:", strlen("R:"), BAUD_9600, 0);
+	ioOpen("R:", strlen("R:"), BAUD_9600, 0, &err);
 	for(;err == ERR_NONE;) {
 		flushBuffer();
 		fixCursor();
@@ -25,7 +25,7 @@ void main(int argc, char **argv)
 		if (err != ERR_NONE)break;
 		err = readData();
 	}
-	serialClose("R:", strlen("R:"));
+	ioClose(&err);
 	screenRestore();
 	closeChio();
 }

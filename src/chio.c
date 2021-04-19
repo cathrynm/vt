@@ -889,3 +889,14 @@ unsigned char initChio(void) // Don't use malloc from here.
 	iocbErrUpdate(2, &err);
 	return err;
 }
+
+unsigned char errUpdate(unsigned char err, unsigned char *oldErr)
+{
+	if (((*oldErr == ERR_NONE) || (*oldErr == ERR_ENDOFFILE)) && (err != ERR_NONE))*oldErr = err;
+	return *oldErr;
+}
+
+unsigned char iocbErrUpdate(unsigned char iocb, unsigned char *oldErr)
+{
+	return errUpdate(OS.iocb[iocb].status, oldErr);
+}
