@@ -123,8 +123,10 @@ void readData(unsigned char *err) {
 			}
 			if (*err != ERR_NONE)break;
 			inputReady -= readLen;
+			if (anyKey())break;
 		}
 		if (*err != ERR_NONE)break;
+		if (anyKey())break;
 	}
 }
 

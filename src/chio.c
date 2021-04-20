@@ -678,6 +678,9 @@ unsigned char isKeyReady(void) {
 	return 0;
 }
 
+unsigned char anyKey(void) {
+	return OS.ch != 0xff;
+}
 
 unsigned char extraKey(void)
 {

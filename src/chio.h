@@ -19,6 +19,7 @@ unsigned char iocbErrUpdate(unsigned char iocb, unsigned char *oldErr);
 void memCopy(unsigned char *top, const unsigned char *fromp, unsigned short len);
 void memClear(unsigned char *top, unsigned short len);
 void decodeUtf8Char(unsigned char c, unsigned char *err);
+unsigned char anyKey(void);
 
 extern unsigned char *eColon;
 extern unsigned char clearScreenChar;
