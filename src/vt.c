@@ -641,6 +641,12 @@ void vt52CursorPosition(unsigned char x, unsigned char y)
 void processQuestion(unsigned char c)
 {
 	switch(c) {
+		case 'J':
+			clearScreen(esc.params[0]); // Should not set attributes
+			break;
+		case 'K':
+			clearLine(esc.params[0]); // should not set attributes
+			break;
 		case 'h':
 			if ((esc.params[0] < NUMMODEP) && !vt.modeP[esc.params[0]]) {
 				setModeP(esc.params[0], 1);
