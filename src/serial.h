@@ -29,6 +29,10 @@
 #define BAUD_4800 13
 #define BAUD_9600 14
 #define BAUD_19200 15
+#define BAUD_230400 0x40
+#define BAUD_57600 1
+#define BAUD_115200 3
+#define BAUD_NONE 255
 #define RWORDSIZE_8 0
 #define RWORDSIZE_7 16
 #define RWORDSIZE_6 32
@@ -76,5 +80,6 @@ unsigned char getParity(void);
 unsigned short serialStatus(unsigned char *err);
 void serialFlow(unsigned short inputReady, unsigned char *err);
 void serialRead(unsigned char *data, unsigned short len, unsigned char *err);
+unsigned char stringToBaud(unsigned char *s);
 
 #endif

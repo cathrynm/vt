@@ -219,7 +219,6 @@ void initScreen(void)
 		break;
 	}
 	if (isXep80()) {
-
 		setBurstMode(1);
 		OS.colcrs = 0;
 		setXEPXPos(OS.colcrs);
@@ -230,7 +229,8 @@ void initScreen(void)
 		screen.xepX = OS.colcrs;
 		screen.currentXepX = screen.xepX;
 		screen.screenWidth = XEPRMARGIN - 1;
-		callEColonSpecial(20, 12, XEP_CURSORON);		
+		callEColonSpecial(20, 12, XEP_CURSORON);
+		setXepCharSet(XEPCH_INTERN);
 	}
 	screen.directDraw = directDrawTest();
 	drawClearScreen();
@@ -246,6 +246,7 @@ void screenRestore(void)
 		setXepCharSet(isIntl()? XEPCH_ATINT: XEPCH_ATASCII);
 		OS.rmargn = screen.origRMargn;
 	}
+
 	OS.dspflg = 0;
 	callEColonPutByte(clearScreenChar);
 }

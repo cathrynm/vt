@@ -46,6 +46,23 @@ unsigned short getBaud(void)
 	}
 }
 
+unsigned char stringToBaud(unsigned char *s)
+{
+	unsigned char n;
+	static unsigned char *baudNames[16] = {
+		"300",  "45.5", "50",    "56.875",
+		"75",   "110",  "134.5", "150",
+		"300",  "600",  "1200",  "1800",
+		"2400", "4800", "9600",  "19200"};
+	for (n=0;n<=15;n++) {
+		if (!strcmp(s, baudNames[n]))return n;
+	}
+	if (!strcmp(s, "57600"))return BAUD_57600;
+	else if (!strcmp(s, "230400"))return BAUD_230400;
+	else if (!strcmp(s, "115200"))return BAUD_115200; 
+	return 255;
+}
+
 unsigned char getBits(void)
 {
 	switch(serial.baudWordStop & 0x30) {

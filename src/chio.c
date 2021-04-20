@@ -23,14 +23,17 @@ unsigned char isXep80(void) {
 	return chio.xep80;
 }
 
-
-
 void drawChar(unsigned char ch)
 {
 	OS.iocb[0].buffer = &ch;
 	OS.iocb[0].buflen = 1;
 	OS.iocb[0].command = IOCB_PUTCHR;
 	cio(0);
+}
+
+void drawString(unsigned char *s)
+{
+	for (;*s;s++)drawChar(*s);
 }
 
 unsigned char isIntl(void)
@@ -869,9 +872,7 @@ unsigned char initChio(void) // Don't use malloc from here.
 
 	if ((unsigned short) OS.memlo < startAddress)
 		_heapadd(OS.memlo, startAddress - (unsigned short) OS.memlo); // recover memory below font and above lomem
-	if (chio.xep80) {
-		setXepCharSet(XEPCH_INTERN);
-	}
+
 	chio.utfType  = 0;
 	chio.osType = get_ostype() & AT_OS_TYPE_MAIN;
 	if (chio.osType >= 2) chio.keyTab = OS.keydef;
@@ -900,4 +901,15 @@ unsigned char errUpdate(unsigned char err, unsigned char *oldErr)
 unsigned char iocbErrUpdate(unsigned char iocb, unsigned char *oldErr)
 {
 	return errUpdate(OS.iocb[iocb].status, oldErr);
+}
+
+unsigned char getline(unsigned char *buf, unsigned char len, unsigned char *err)
+{
+	OS.iocb[0].buffer=buf;
+	OS.iocb[0].buflen=len;
+	OS.iocb[0].command=IOCB_GETREC;
+	cio(0);
+	iocbErrUpdate(0, err);
+	if (*err != ERR_NONE) return 0;
+	return OS.iocb[0].buflen;
 }
