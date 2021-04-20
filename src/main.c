@@ -21,9 +21,10 @@ void main(int argc, char **argv)
 	for(;err == ERR_NONE;) {
 		flushBuffer();
 		fixCursor();
-		err = handleInput();
+		handleInput(&err);
 		if (err != ERR_NONE)break;
-		err = readData();
+		readData(&err);
+		if (err != ERR_NONE)break;
 	}
 	ioClose(&err);
 	screenRestore();

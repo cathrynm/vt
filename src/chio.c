@@ -537,12 +537,12 @@ void convertShortToVisibleChar(unsigned short c, unsigned char *ch, unsigned cha
 }
 
 
-void decodeUtf8Char(unsigned char c)
+void decodeUtf8Char(unsigned char c, unsigned char *err)
 {
 	unsigned char ch, attrib;
 	switch(chio.utfType) {
 		case 0:
-			if (!(c & 0x80))processChar(c);
+			if (!(c & 0x80))processChar(c, err);
 			else if ((c & 0xe0) == 0xc0) {
 				chio.utfType = 1;
 				chio.utfWord = ((unsigned short)c) << 6;
@@ -732,17 +732,16 @@ unsigned char convertAtasciiToUtf8(unsigned char c, unsigned char *utf8, unsigne
 	return 0;
 }
 
-unsigned char handleInput(void)
+void handleInput(unsigned char *err)
 {
-	unsigned char err = ERR_NONE;
 	static unsigned char cr = 0x9b, bs = 8, del = 0x7f, null = 0;
 	unsigned char utf8[4];
 	unsigned char superF, ch, shift = OS.ch & 0xc0, utf8Len;
 	ch = extraKey(); // Check for any special keys first. 
 	if (!ch) {
-		if (!isKeyReady())return ERR_NONE;
-		ch = getChar(&err);
-		if (err != ERR_NONE)return err;
+		if (!isKeyReady())return;
+		ch = getChar(err);
+		if (*err != ERR_NONE)return;
 	}
 	superF = OS.superf;
 	switch(ch) {
@@ -751,56 +750,55 @@ unsigned char handleInput(void)
 		case CH_CURS_LEFT:
 		case CH_CURS_RIGHT:
 			if (superF) {
-				vtSendPgUpDown(ch - CH_CURS_UP);
+				vtSendPgUpDown(ch - CH_CURS_UP, err);
 			} else {
-				vtSendCursor(ch - CH_CURS_UP);
+				vtSendCursor(ch - CH_CURS_UP, err);
 			}
 			break;
 		case CH_DEL:
-			sendResponse(&bs, 1);
+			sendResponse(&bs, 1, err);
 			break;
 		case CH_INSCHR:{
-			sendResponse("\033[@", 3);
+			sendResponse("\033[@", 3, err);
 			break;
 		}
 		case CH_DELCHR:{
 			//sendResponse(&del, 1);
-			sendResponse("\033[P", 3);
+			sendResponse("\033[P", 3, err);
 			break;
 		}
 		case ' ':
 			if ((shift & 0xc0) == 0x80) {
-				sendResponse(&null, 1);
-			} else sendResponse(" ", 1);
+				sendResponse(&null, 1, err);
+			} else sendResponse(" ", 1, err);
 			break;
 		case '.':
-			if ((shift & 0xc0) == 0x80) sendResponse("\033", 1);
-			else sendResponse(".", 1);
+			if ((shift & 0xc0) == 0x80) sendResponse("\033", 1, err);
+			else sendResponse(".", 1, err);
 			break;
 		case ',':
-			if ((shift & 0xc0) == 0x80) sendResponse("\035", 1);
-			else sendResponse(",", 1);
+			if ((shift & 0xc0) == 0x80) sendResponse("\035", 1, err);
+			else sendResponse(",", 1, err);
 			break;
 		case '?':
-			if ((shift & 0xc0) == 0x80) sendResponse("\037", 1);
-			else sendResponse("?", 1);
+			if ((shift & 0xc0) == 0x80) sendResponse("\037", 1, err);
+			else sendResponse("?", 1, err);
 			break;
 		case CH_EOL:
-			vtSendCr();
+			vtSendCr(err);
 			break;
 		default: {
 			// Control characters go through, also 
 			if (((ch >= 1) && (ch <= 26)) || (ch >= 32 && ch <=95) || (ch >= 97 && ch <= 122) || (ch == 124) || (ch == CH_ESC)) {
-				sendResponse(&ch, 1);
+				sendResponse(&ch, 1, err);
 				break;
 			}
 			if (convertAtasciiToUtf8(ch, &utf8[0], &utf8Len)) {
-				sendResponse(utf8, utf8Len);
+				sendResponse(utf8, utf8Len, err);
 			}
 			break;
 		}
 	}
-	return err;
 }
 
 

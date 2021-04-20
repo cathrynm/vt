@@ -142,3 +142,18 @@ unsigned char sioWrite(unsigned char *buffer, unsigned char bufLen, unsigned cha
   return (*err == ERR_NONE)?bufLen:0;
 }
 
+unsigned short sioStatus(unsigned char device, unsigned char *err) {
+  OS.dcb.ddevic = device;
+  OS.dcb.dunit = 1;
+  OS.dcb.dcomnd = 'S';
+  OS.dcb.dstats = 0x40;
+  OS.dcb.dbuf = &OS.dvstat;
+  OS.dcb.dtimlo = SIO_TIMEOUT;
+  OS.dcb.dbyt = 4;
+  OS.dcb.daux1 = 0;
+  OS.dcb.daux2 = 0;
+  sio();
+  dcbErrUpdate(err);
+  if (*err != ERR_NONE)return 0;
+  return * (unsigned short *) &OS.dvstat[0];
+}

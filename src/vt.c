@@ -100,7 +100,7 @@ void cursorSave(void);
 void clearScreen(unsigned char which);
 
 // 0 = UP 1 = DOWN 2 = LEFT 3 = RIGHT
-void vtSendCursor(unsigned char cursor)
+void vtSendCursor(unsigned char cursor, unsigned char *err)
 {
 	static unsigned char *cusorCodes[2][4] = {
 		{
@@ -110,27 +110,27 @@ void vtSendCursor(unsigned char cursor)
 			"\033OA", "\033OB", "\033OD", "\033OC"
 		}};
 	unsigned char *s = cusorCodes[vt.modeP[MODEP_DECCKM]][cursor];
-	sendResponse(s, strlen(s));
+	sendResponse(s, strlen(s), err);
 }
 
 // 0= PgUp 1=PgDown 2=Home 3=End 
-void vtSendPgUpDown(unsigned char key)
+void vtSendPgUpDown(unsigned char key, unsigned char *err)
 {
 	static unsigned char *charCodes[4] = {
 		"\033[3~", "\033[6~", "\033[H", "\033[F"
 	};
 	unsigned char *s =  charCodes[key];
-	sendResponse(s, strlen(s));
+	sendResponse(s, strlen(s), err);
 }
 
 // Player typed Enter on Atari
-void vtSendCr(void)
+void vtSendCr(unsigned char *err)
 {
 	static unsigned char crlf[2] = {13, 10}; // cc65 crazy "\012 gets converted to 0x9b
 	if (vt.mode[MODE_LNM]) {
-		sendResponse(crlf, 2);
+		sendResponse(crlf, 2, err);
 	} else {
-		sendResponse(&crlf[0], 1);
+		sendResponse(&crlf[0], 1, err);
 	}
 }
 
@@ -367,13 +367,13 @@ unsigned char charToA(unsigned char v, unsigned char *s, unsigned char m)
 	return m;
 }
 
-void reportStatus(void)
+void reportStatus(unsigned char *err)
 {
 	static unsigned char reportChar[4] = "\033[0n";
-	sendResponse(reportChar, 4);
+	sendResponse(reportChar, 4, err);
 }
 
-void reportCursor(void)
+void reportCursor(unsigned char *err)
 {
 	unsigned char off;
 	static unsigned char reportChar[10] = "\033[";
@@ -381,19 +381,19 @@ void reportCursor(void)
 	reportChar[off++] = ';';
 	off = charToA(vt.x+1, reportChar, off);
 	reportChar[off++] = 'R';
-	sendResponse(reportChar, off);
+	sendResponse(reportChar, off, err);
 }
 
-void reportTerminal(void)
+void reportTerminal(unsigned char *err)
 {
 	static unsigned char reportTerminal[5] = "\033[?6c"; // are we ever not okay?
-	sendResponse(reportTerminal, 5);
+	sendResponse(reportTerminal, 5, err);
 }
 
-void reportTerminalType(void)
+void reportTerminalType(unsigned char *err)
 {
 	static unsigned char reportTerminal[4] = "\033[0n"; // are we ever not okay?
-	sendResponse(reportTerminal, 4);
+	sendResponse(reportTerminal, 4, err);
 }
 
 unsigned char serialToVt(unsigned short speed)
@@ -439,7 +439,7 @@ unsigned parityToVt(unsigned char parity)
 	}
 }
 
-void reportTerminalParams(unsigned char mode) 
+void reportTerminalParams(unsigned char mode, unsigned char *err) 
 {
 	unsigned char off;
 	static unsigned char reportTerminal[32] = "\033[";
@@ -457,7 +457,7 @@ void reportTerminalParams(unsigned char mode)
 	reportTerminal[off++] = ';';
 	off = charToA(15, reportTerminal, off); // flags
 	reportTerminal[off++] = 'x';
-	sendResponse(reportTerminal, off);
+	sendResponse(reportTerminal, off, err);
 }
 
 void setAttributes(void)
@@ -671,7 +671,7 @@ void processQuestion(unsigned char c)
 	}
 }
 
-void processCommand(unsigned char c)
+void processCommand(unsigned char c, unsigned char *err)
 {
 	switch(c) {
 		case '@':
@@ -724,7 +724,7 @@ void processCommand(unsigned char c)
 			eraseCharacters(esc.params[0]);
 			break;
 		case 'c': 
-			reportTerminal();
+			reportTerminal(err);
 			break; // \033[6c for VT102
 		case 'g':
 			tabClear(esc.params[0]);
@@ -747,10 +747,10 @@ void processCommand(unsigned char c)
 		case 'n': // device status
 			switch(esc.params[0]) {
 				case 5: // terminal status
-					reportStatus();
+					reportStatus(err);
 					break;
 				case 6: //
-					reportCursor();
+					reportCursor(err);
 					break;
 			}
 			break;
@@ -767,7 +767,7 @@ void processCommand(unsigned char c)
 			cursorRestore();
 			break;
 		case 'x':
-			reportTerminalParams(esc.params[0]);
+			reportTerminalParams(esc.params[0], err);
 			break;
 
 		case 'y': // confidence test
@@ -828,7 +828,7 @@ void processHash(unsigned char c)
 	}
 }
 
-void processOther(unsigned char c)
+void processOther(unsigned char c, unsigned char *err)
 {
 	switch(c) {
 		case 'c': // reset terminal
@@ -855,7 +855,7 @@ void processOther(unsigned char c)
 			vt.singleShift = vt.charSet[3];
 			break;
 		case 'Z': // identify terminal // Response Esc/Z
-			reportTerminal();
+			reportTerminal(err);
 			break; 
 		case '7': // save cursor position graphic rendition and charset
 			cursorSave();
@@ -876,7 +876,7 @@ void processOther(unsigned char c)
 
 
 
-void processVt52Command(unsigned char c)
+void processVt52Command(unsigned char c, unsigned char *err)
 {
 	switch(c) {
 		case 'A':
@@ -910,7 +910,7 @@ void processVt52Command(unsigned char c)
 			esc.commandIndex++; // Get the positions next
 			return;
 		case 'Z':
-			sendResponse("\033/Z", 3);
+			sendResponse("\033/Z", 3, err);
 			break;
 		case '<':
 			vt.modeP[MODEP_DECANM] = 1; // Exit vt52 mode.
@@ -943,7 +943,7 @@ void debugVt(unsigned char c)
 #endif
 }
 
-void processChar(unsigned char c) {
+void processChar(unsigned char c, unsigned char *err) {
 	unsigned short wCh;
 	unsigned char ch, attrib;
 	unsigned short paramVal;
@@ -998,7 +998,7 @@ void processChar(unsigned char c) {
     else if ((c >= VT_SPACE) && (c < VT_DEL)) {
 		if (!vt.modeP[MODEP_DECANM]) {
 			if (esc.commandIndex == 1) {
-				processVt52Command(c);
+				processVt52Command(c, err);
 			} else if (esc.commandIndex == 2) {
 				esc.secondChar = c;
 				vt52CursorPosition(esc.secondChar - 32, vt.y);
@@ -1035,10 +1035,10 @@ void processChar(unsigned char c) {
 					esc.commandIndex++;
 				} else {
 					if ((esc.secondChar == '[') && (esc.thirdChar == '?'))processQuestion(c);
-					else if (esc.secondChar == '[')processCommand(c);
+					else if (esc.secondChar == '[')processCommand(c, err);
 					else if (esc.secondChar == '(' || esc.secondChar == ')' ||  esc.secondChar == '*' || esc.secondChar == '+' )processCharSet(esc.secondChar, c);
 					else if (esc.secondChar == '#')processHash(c);
-					else processOther(c);
+					else processOther(c, err);
 					esc.commandIndex = 0;
 				}
 			} else {
@@ -1054,15 +1054,14 @@ void processChar(unsigned char c) {
 	vt.prevChar = c;
 }
 
-void processChars(unsigned char *s, unsigned char len)
+void processChars(unsigned char *s, unsigned char len, unsigned char *err)
 {
-	for(;len--;)processChar(*s++);
+	for(;len--;)processChar(*s++, err);
 }
 
-void sendResponse(unsigned char *s, unsigned char len)
+void sendResponse(unsigned char *s, unsigned char len, unsigned char *err)
 {
-	unsigned char err = ERR_NONE;
 	if (!vt.mode[MODE_SRM])
-		processChars(s, len);
-	sendSerialResponse(s, len, &err);
+		processChars(s, len, err);
+	sendIoResponse(s, len, err);
 }
