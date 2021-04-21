@@ -47,11 +47,7 @@ void ioOpen(unsigned char *deviceName, unsigned char deviceLen, openIoStruct *op
 		case 'N':
 			deviceName = processFilename(deviceName, deviceLen, &io.sioDevice, &buff, err);
 			if (*err == ERR_NONE) {
-				sioStatus(io.sioDevice, err);
-				OS.stack[0] = *err;
-				*err = ERR_NONE;
 				sioOpen(deviceName, deviceLen, io.sioDevice, IOCB_WRITEBITS|IOCB_READBITS, 0, err);
-				OS.stack[1] = *err;
 			}
 			if (buff)free(buff);
 			break;
