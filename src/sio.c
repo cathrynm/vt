@@ -43,6 +43,23 @@ unsigned char *bufferFix(unsigned char *data, unsigned char len, unsigned short 
   return buffer;
 }
 
+void extendedError(unsigned char device, unsigned char *err)
+{
+  if (*err != ERR_DEVICEDONE) return;
+  OS.dvstat[3] = ERR_NONE;
+  OS.dcb.ddevic = device;
+  OS.dcb.dunit = 1;
+  OS.dcb.dcomnd = 'S';
+  OS.dcb.dstats = 0x40;
+  OS.dcb.dbuf = &OS.dvstat;
+  OS.dcb.dtimlo = SIO_TIMEOUT;
+  OS.dcb.dbyt = 4;
+  OS.dcb.daux1 = 0;
+  OS.dcb.daux2 = 0;
+  sio();
+  if (OS.dvstat[3] > ERR_NONE) *err = OS.dvstat[3];
+}
+
 void sioOpen(unsigned char *fName, unsigned char fLen, unsigned char device, unsigned char aux1, unsigned char aux2, unsigned char *err)
 {
   unsigned char *buff;
@@ -61,6 +78,7 @@ void sioOpen(unsigned char *fName, unsigned char fLen, unsigned char device, uns
   sio();
   dcbErrUpdate(err);
   if (buff)free(buff);
+  if (*err == ERR_DEVICEDONE)extendedError(device, err);
 }
 
 void sioSpecial(unsigned char *fName, unsigned char fLen, unsigned char device, unsigned char special, unsigned char dStats, unsigned char aux1, unsigned char aux2, unsigned char *err)
@@ -85,6 +103,7 @@ void sioSpecial(unsigned char *fName, unsigned char fLen, unsigned char device, 
   sio();
   dcbErrUpdate(err);
   bufferFixDone(fName, fLen, 256, dStats, &buff, *err);
+  if (*err == ERR_DEVICEDONE)extendedError(device, err);
 }
 
 void sioClose(unsigned char device, unsigned char *err)
@@ -100,7 +119,9 @@ void sioClose(unsigned char device, unsigned char *err)
   OS.dcb.daux2 = 0;
   sio();
   dcbErrUpdate(err);
+  if (*err == ERR_DEVICEDONE)extendedError(device, err);
 }
+
 
 unsigned char sioRead(unsigned char *buffer, unsigned char bufLen, unsigned char device, unsigned char *err) {
   unsigned char *buff;
@@ -120,6 +141,7 @@ unsigned char sioRead(unsigned char *buffer, unsigned char bufLen, unsigned char
   sio();
   dcbErrUpdate(err);
   bufferFixDone(buffer, bufLen, bufLen, 0x40, &buff, *err);
+  if (*err == ERR_DEVICEDONE)extendedError(device, err);
   return (*err == ERR_NONE)?bufLen:0;
 }
 
@@ -139,6 +161,7 @@ unsigned char sioWrite(unsigned char *buffer, unsigned char bufLen, unsigned cha
   sio();
   dcbErrUpdate(err);
   if (*buff) free(buff);
+  if (*err == ERR_DEVICEDONE)extendedError(device, err);
   return (*err == ERR_NONE)?bufLen:0;
 }
 
