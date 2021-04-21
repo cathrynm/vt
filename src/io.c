@@ -47,12 +47,16 @@ void ioOpen(unsigned char *deviceName, unsigned char deviceLen, openIoStruct *op
 		case 'N':
 			deviceName = processFilename(deviceName, deviceLen, &io.sioDevice, &buff, err);
 			if (*err == ERR_NONE) {
+				sioStatus(io.sioDevice, err);
+				OS.stack[0] = *err;
+				*err = ERR_NONE;
 				sioOpen(deviceName, deviceLen, io.sioDevice, IOCB_WRITEBITS|IOCB_READBITS, 0, err);
+				OS.stack[1] = *err;
 			}
 			if (buff)free(buff);
 			break;
 		default:
-			*err = ERR_DEVICENOTEXIST;
+			errUpdate(ERR_DEVICENOTEXIST, err);
 			break;
 	}
 	if (*err == ERR_NONE) {
@@ -72,7 +76,7 @@ unsigned short ioStatus(unsigned char *err) {
 		case 'N':
 			return sioStatus(io.sioDevice, err);
 		default:
-			*err = ERR_DEVICENOTEXIST;
+			errUpdate(ERR_DEVICENOTEXIST, err);
 			break;
 	}
 }
@@ -85,7 +89,7 @@ void ioFlow(unsigned short inputReady, unsigned char *err) {
 		case 'N':
 			break;
 		default:
-			*err = ERR_DEVICENOTEXIST;
+			errUpdate(ERR_DEVICENOTEXIST, err);
 			break;
 	}
 }
@@ -99,7 +103,7 @@ void ioRead(unsigned char *data, unsigned short len, unsigned char *err) {
 			sioRead(data, len, io.sioDevice, err);
 			break;
 		default:
-			*err = ERR_DEVICENOTEXIST;
+			errUpdate(ERR_DEVICENOTEXIST, err);;
 			break;
 	}
 }
@@ -135,8 +139,11 @@ void ioClose(unsigned char *err)
 		case 'R':
 			serialClose(io.deviceName, io.deviceLen, err);
 			break;
+		case 'N':
+			sioClose(io.sioDevice, err);
+			break;
 		default:
-			*err = ERR_DEVICENOTEXIST;
+			errUpdate(ERR_DEVICENOTEXIST, err);
 			break;
 	}
 }
@@ -151,7 +158,7 @@ void sendIoResponse(unsigned char *s, unsigned char len, unsigned char *err)
 			sioWrite(s, len, io.sioDevice, err);
 			break;
 		default:
-			*err = ERR_DEVICENOTEXIST;
+			errUpdate(ERR_DEVICENOTEXIST, err);
 			break;
 	}
 }
