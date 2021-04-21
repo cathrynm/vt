@@ -7,8 +7,13 @@
 #define IOCB_LONGDIRECTORY 0x80
 #define AOS_DIRECTORY 1
 
+typedef struct {
+	unsigned char baudWordStop, mon;
+	unsigned char *user, *passwd;
+} openIoStruct;
+
 void readData(unsigned char *err);
-void ioOpen(unsigned char *device, unsigned char deviceLen, unsigned char baudWordStop, unsigned char mon, unsigned char *err);
+void ioOpen(unsigned char *device, unsigned char deviceLen, openIoStruct *openIo, unsigned char *err);
 void ioClose(unsigned char *err);
 void sendIoResponse(unsigned char *s, unsigned char len, unsigned char *err);
 

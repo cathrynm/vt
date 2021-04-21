@@ -1,14 +1,13 @@
 #include "main.h"
 
-typedef struct ioDataStruct ioStruct;
 #define READBUFFERLEN 255
-struct ioDataStruct {
+typedef struct {
 	unsigned char readBuffer[READBUFFERLEN];
 	unsigned char *deviceName;
 	unsigned char deviceLen;
 	unsigned char deviceType;
 	unsigned char sioDevice;
-};
+} ioStruct;
 ioStruct io;
 
 unsigned char *processFilename(unsigned char *fName, unsigned char len, unsigned char *device, unsigned char **buff, unsigned char *err) {
@@ -38,12 +37,12 @@ unsigned char *processFilename(unsigned char *fName, unsigned char len, unsigned
   return fName;
 }
 
-void ioOpen(unsigned char *deviceName, unsigned char deviceLen, unsigned char baudWordStop, unsigned char mon, unsigned char *err) {
+void ioOpen(unsigned char *deviceName, unsigned char deviceLen, openIoStruct *openIo, unsigned char *err) {
 	unsigned char *buff;
 	io.deviceType = toupper((deviceLen > 0)? deviceName[0]: 0);
 	switch(io.deviceType) {
 		case 'R':
-			serialOpen(deviceName, deviceLen, baudWordStop, mon, err);
+			serialOpen(deviceName, deviceLen, openIo->baudWordStop, openIo->mon, err);
 			break;
 		case 'N':
 			deviceName = processFilename(deviceName, deviceLen, &io.sioDevice, &buff, err);

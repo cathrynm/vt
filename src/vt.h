@@ -25,5 +25,6 @@ void resetVt(void);
 void processChars(unsigned char *s, unsigned char len, unsigned char *err);
 void sendResponse(unsigned char *s, unsigned char len, unsigned char *err);
 void fixCursor(void);
+unsigned char charToA(unsigned char v, unsigned char *s, unsigned char m);
 
 #endif
