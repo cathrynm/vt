@@ -1,29 +1,14 @@
 #ifndef SCREEN_H
 #define SCREEN_H 1
 
-#define XEPCH_ATASCII 0xd4
-#define XEPCH_ATINT 0xd5
-#define XEPCH_INTERN 0xd6
+#define SCREENLINES 24
 
-#define XEP_SETCURSORHPOS 0
-#define XEP_SETCURSORHPOSHI 0x50
-#define XEP_SETCURSORVPOS	0x80
-#define XEP_SETRIGHTMARGINLO 0xa0
-#define XEP_SETRIGHTMARGINHI 0xb0
-#define XEP_RESET			0xc2
-#define XEP_FILLPREVCHAR	0xc4
-#define XEP_FILLSPACE		0xc5
-#define XEP_FILLEOL			0xc6
-#define XEP_CURSOROFF		0xd8
-#define XEP_CURSORON		0xd9
-#define XEP_CURSORONBLINK		0xda
-#define XEP_WRITEBYTE   	0xe3
-#define XEP_SETEXTRABYTE	0xe4
-#define XEP_WRITEINTERNALBYTE 0xe5
-#define XEP_SETATTRLATCH0 0xf4
-#define XEP_SETATTRLATCH1 0xf5
-#define XEP_SETTCP 0xf6
-#define XEP_WRITETCP 0xf7
+typedef struct {
+	unsigned char screenWidth;
+	unsigned char lineLength[SCREENLINES];
+}screenXStruct;
+
+extern screenXStruct screenX;
 
 void initScreen(void);
 void cursorUpdate(unsigned char x, unsigned char y);
@@ -43,12 +28,8 @@ void screenRestore(void);
 void drawClearScreen(void);
 void flushBuffer(void);
 void cursorHide(void);
-unsigned char setXepCharSet(unsigned char which);
-void setXepRowPtr(unsigned char y, unsigned char val);
-unsigned char isXep80Internal(void);
-void setXEPLastChar(unsigned char c);
-void setXEPCommand(unsigned char c, unsigned char command);
-unsigned char isXep80Internal(void);
-void endBurstMode(void);
+void callEColonSpecial(unsigned char command, unsigned char aux1, unsigned char aux2);
+void callEColonPutBytes(unsigned char *buf, unsigned char len);
+void callEColonPutByte(unsigned char ch);
 
 #endif
