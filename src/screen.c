@@ -8,82 +8,18 @@
 
 
 typedef struct {
+	unsigned char logMapTrick;
 	unsigned char bufferLen, bufferX, bufferY;
 	unsigned char directDraw;
 	unsigned char clearBuffer[SCREENCOLUMNS];
 	unsigned char buffer[SCREENCOLUMNS];
-	unsigned short lineTab[SCREENLINES];
 	void (*eColonSpecial)();
-	void *eColonPutByte;
 }screenStruct;
 
 screenXStruct screenX;
 screenStruct screen;
 
-void writeScreen(unsigned char *s, unsigned char len, unsigned char x, unsigned char y)
-{
-	static unsigned char sAtascii[4] = {0x40, 0x00, 0x20, 0x60};
-	unsigned char *p, *pStart, c;
-	pStart = OS.savmsc + x + screen.lineTab[y];
-	if (len > screenX.screenWidth - x)len = screenX.screenWidth - x;
 
-	for (p = pStart;len--;) {
-		c = *s++;
-		*p++ = sAtascii[(c & 0x60) >> 5] | (c & 0x9f);
-	}
-	if (((unsigned short) OS.oldadr >= (unsigned short) pStart)  && 
-		 ((unsigned short) OS.oldadr < (unsigned short) p)) {
-		OS.oldchr = pStart[(unsigned short)OS.oldadr - (unsigned short)pStart];
-	}
-}
-
-
-void directScrollUp(unsigned char topY, unsigned char bottomY)
-{
-	unsigned char y, len;
-	unsigned char *p, *pStart, *pEnd, *pBottom;
-	pStart = OS.savmsc + screen.lineTab[topY];
-	pBottom =  OS.savmsc + screen.lineTab[bottomY];
-	pEnd = pBottom + screenX.screenWidth;
-	if (((unsigned short) OS.oldadr >= (unsigned short) pStart)  && 
-		 ((unsigned short) OS.oldadr < (unsigned short) pEnd)) {
-		pStart[(unsigned short)OS.oldadr - (unsigned short)pStart] = OS.oldchr;
-	}
-	if (bottomY > topY) {
-		// memmove(pStart, &pStart[screenX.screenWidth], screen.lineTab[bottomY - topY]);
-		p = pStart;
-		for (y = topY;y+1 <= bottomY;y++, p += screenX.screenWidth) {
-			len = (screenX.lineLength[y] > screenX.lineLength[y+1])? screenX.lineLength[y]: screenX.lineLength[y+1];
-			if (len > 0)memcpy(p, &p[screenX.screenWidth], len);
-		}
-	}
-	if (screenX.lineLength[bottomY] > 0)
-		memset(pBottom, 0, screenX.lineLength[bottomY]);
-	if (((unsigned short) OS.oldadr >= (unsigned short) pStart)  && 
-		 ((unsigned short) OS.oldadr < (unsigned short) pEnd)) {
-		OS.oldchr = pStart[(unsigned short)OS.oldadr - (unsigned short)pStart];
-	}
-}
-
-void directScrollDown(unsigned char topY, unsigned char bottomY)
-{
-	unsigned char *pStart, *pEnd;
-	pStart = OS.savmsc + screen.lineTab[topY];
-	pEnd =  OS.savmsc + screen.lineTab[bottomY] + screenX.screenWidth;
-	if (((unsigned short) OS.oldadr >= (unsigned short) pStart)  && 
-		 ((unsigned short) OS.oldadr < (unsigned short) pEnd)) {
-		pStart[(unsigned short)OS.oldadr - (unsigned short)pStart] = OS.oldchr;
-	}
-	if (bottomY > topY) {
-		 memmove(&pStart[screenX.screenWidth], pStart, screen.lineTab[bottomY - topY]);
-	}
-	if (screenX.lineLength[topY] > 0)
-		memset(pStart, 0, screenX.lineLength[topY]);
-	if (((unsigned short) OS.oldadr >= (unsigned short) pStart)  && 
-		 ((unsigned short) OS.oldadr < (unsigned short) pEnd)) {
-		OS.oldchr = pStart[(unsigned short)OS.oldadr - (unsigned short)pStart];
-	}
-}
 
 void callEColonSpecial(unsigned char command, unsigned char aux1, unsigned char aux2)
 {
@@ -119,25 +55,16 @@ void callEColonPutBytes(unsigned char *buf, unsigned char len)
 }
 
 
-
-
-unsigned char directDrawTest(void)
+unsigned char logMapTrickTest(void)
 {
-	unsigned char n, y;
-	static const unsigned char drawTest[]  = {CH_CLR, '0', CH_EOL, '1'};
+	static const unsigned char drawTest[]  = {CH_CLR, CH_CURS_LEFT, ' '};
+	static const unsigned char drawTest2[] = {CH_CURS_RIGHT, CH_CURS_LEFT};
 	OS.dspflg = 0;
-	callEColonPutBytes((unsigned char *)drawTest, 4);
-	if (OS.savmsc[0] + 32 != '0')return 0;
-	for (n = 1;n < 255;n++) {
-		if (OS.savmsc[n]  + 32 == '1') {
-
-			for (y = 0;y< SCREENLINES;y++) {
-				screen.lineTab[y] = (unsigned short) y * (unsigned short) n;
-			}
-			return n;
-		}
-	}
-	return 0;
+	OS.logmap[0] = 0xff - (1 << (7-1));
+	callEColonPutBytes((unsigned char *)drawTest, 3);
+	OS.logmap[0] = 0xff;
+	callEColonPutBytes((unsigned char *)drawTest2, 2);
+	return (OS.logcol == OS.lmargn);  // IF logmap trick works, then a line is not inserted here.
 }
 
 void initScreen(void)
@@ -152,7 +79,6 @@ void initScreen(void)
 	for (n = 0;n < 11;n++) {
 		if (OS.hatabs[n].id != 'E')continue;
 		devhdl = OS.hatabs[n].devhdl;
-		screen.eColonPutByte = (void *) ( (unsigned short) devhdl->put + 1);
 		screen.eColonSpecial =  (void (*)(void)) ( (unsigned short) devhdl->special + 1);
 		break;
 	}
@@ -160,6 +86,12 @@ void initScreen(void)
 		initXep();
 	}
 	screen.directDraw = directDrawTest();
+	if (screen.directDraw) {
+		initDirect();
+	}
+	if (!isXep80() && !screen.directDraw) {
+		screen.logMapTrick = logMapTrickTest(); // Spartdos gr8 80 col doesn't do this.  Maybe it could?
+	}
 	drawClearScreen();
 }
 
@@ -219,7 +151,7 @@ void cursorUpdate(unsigned char x, unsigned char y)
 
 void drawCharsAt(unsigned char *buffer, unsigned char bufferLen, unsigned char x, unsigned char y)
 {
-	unsigned char logMapTouch = 0;
+	unsigned char logMapTouch = 0, xp;
 	if ((x >= screenX.screenWidth) || !bufferLen)return;
 	if (x + bufferLen > screenX.screenWidth)bufferLen = screenX.screenWidth - x;
 	if (screen.directDraw) {
@@ -233,17 +165,38 @@ void drawCharsAt(unsigned char *buffer, unsigned char bufferLen, unsigned char x
 		drawCharsAtXep(buffer, bufferLen);
 		return;
 	}
-	if (x + bufferLen >= screenX.screenWidth) {
-		if (y >= SCREENLINES -1) {
-			bufferLen--;
-			if (!bufferLen)return;  // Never draw into the very last character of the last line
-		}
-		logMapTouch = y + 1;
-		OS.logmap[0] = OS.logmap[1] = OS.logmap[2] = OS.logmap[3] = 0; // HACK, prevents atari from wrapping
+	if (x + bufferLen < screenX.screenWidth) {
+		callEColonPutBytes(buffer, bufferLen);
+		return;
 	}
-	callEColonPutBytes(buffer, bufferLen);
-	if (logMapTouch) {
-		OS.logmap[0] = OS.logmap[1] = OS.logmap[2] =  OS.logmap[3] = 0xff; 
+	if (screen.logMapTrick && (y < SCREENLINES-1)) {
+		logMapTouch = y + 1;
+		OS.logmap[logMapTouch >> 3] &= ~(1 << (7-( logMapTouch & 7))); // Fake out OS, tell it next line is continuation, just for this. 
+		callEColonPutBytes(buffer, bufferLen);
+		OS.logmap[logMapTouch >>3] = 0xff;
+	} else {
+		if (bufferLen > 2) {
+			callEColonPutBytes(buffer, bufferLen - 2);
+		}
+		if (bufferLen >= 2) { // Goofy way to draw in last column, but maybe works?
+			xp = x + bufferLen - 2;
+			cursorHide();
+			OS.colcrs = xp;
+			OS.dspflg = 0;
+			callEColonPutByte(CH_DELCHR);
+			OS.colcrs = xp;
+			OS.dspflg = 1;
+			callEColonPutByte(buffer[bufferLen-1]);
+			OS.colcrs = xp;
+			OS.dspflg = 0;
+			callEColonPutByte(CH_INSCHR);
+			OS.colcrs = x + bufferLen - 2;
+			OS.dspflg = 1;
+			callEColonPutByte(buffer[bufferLen-2]);
+		} else {
+			// I have one character to draw on the right edge, and Atari makes this so hard.
+		}
+
 	}
 }
 

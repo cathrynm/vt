@@ -8,6 +8,7 @@
 
 #include "screen.h"
 #include "xep80.h"
+#include "direct.h"
 #include "vt.h"
 #include "chio.h"
 #include "serial.h"
