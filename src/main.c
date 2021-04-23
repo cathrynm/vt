@@ -184,8 +184,7 @@ void main(int argc, char **argv)
 	OS.shflok = crt0.SHFLOK_save;
 	OS.lmargn = crt0.LMARGN_save;
 	for (n= 0;n<argc;n++) crToZero(argv[n], strlen(argv[n]));
-
-	initChio();
+	initDetect();
 
 	for(;;) {
 		if (argc < 2) {
@@ -198,6 +197,7 @@ void main(int argc, char **argv)
 			argc = 0;
 			continue;
 		}
+		initChio();
 		initScreen();
 		resetVt();
 		ioOpen(device, strlen(device), &mainData.openIo, &err);
@@ -214,6 +214,7 @@ void main(int argc, char **argv)
 		ioClose(&err);
 		argc = 0;
 		screenRestore();
+		closeChio();
 	}
-	closeChio();
+	closeDetect();
 }

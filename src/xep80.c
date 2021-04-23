@@ -54,7 +54,6 @@ void setXEPYPos(unsigned char y) {
 
 void xepCursorShadow(void)
 {
-	if (!isXep80())return;
 	if (OS.colcrs == xep.xepX) {
 		if (xep.xepX != xep.currentXepX) {
 			setXEPXPos(xep.xepX);
@@ -118,10 +117,10 @@ void setXEPRMargin(unsigned char x) {
 unsigned char setXepCharSet(unsigned char which)
 {
 	unsigned char err = ERR_NONE;
-	if (!isXep80() || (which == xep.xepCharset))return err;
+	if (which == xep.xepCharset)return err;
 	callEColonSpecial(20, 12, which);
 	xep.xepCharset = which;
-	setFullAscii((which == XEPCH_INTERN));
+	detect.fullAscii = (which == XEPCH_INTERN); // Internal charset has { } ~ characters
 	return err;
 }
 
@@ -235,4 +234,23 @@ void restoreXep(void)
 	setBurstMode(0);
 	setXepCharSet(isIntl()? XEPCH_ATINT: XEPCH_ATASCII);
 	OS.rmargn = xep.origRMargn;
+}
+
+unsigned char XEP80Test(void)
+{
+	unsigned char err;
+	if (OS.rmargn >= 0x40) {
+		err = ERR_NONE;
+		OS.rowcrs = 0;OS.colcrs = OS.lmargn;
+		drawChar(CH_ESC);drawChar(255);
+		OS.iocb[0].buffer = eColon;
+		OS.iocb[0].buflen = strlen(eColon);
+		OS.iocb[0].aux1 = 12;
+		OS.iocb[0].aux2 = 245;
+		OS.iocb[0].command = 20;
+		cio(0);
+		iocbErrUpdate(0, &err);
+		return err == ERR_NONE;
+	}
+	return 0;
 }

@@ -73,17 +73,21 @@ void directScrollDown(unsigned char topY, unsigned char bottomY)
 
 unsigned char directDrawTest(void)
 {
+	unsigned char *scrnPtr;
 	unsigned char n, y;
 	static const unsigned char drawTest[]  = {CH_CLR, '0', CH_EOL, '1'};
 	OS.dspflg = 0;
 	callEColonPutBytes((unsigned char *)drawTest, 4);
-	if (OS.savmsc[0] + 32 != '0')return 0;
+	scrnPtr = OS.sdlst;
+	scrnPtr += 32;
+	if (scrnPtr[0] + 32 != '0')return 0;
+
 	for (n = 1;n < 255;n++) {
-		if (OS.savmsc[n]  + 32 == '1') {
+		if (scrnPtr[n]  + 32 == '1') {
 			for (y = 0;y< SCREENLINES;y++) {
 				direct.lineTab[y] = (unsigned short) y * (unsigned short) n;
 			}
-			return n;
+			return 1;
 		}
 	}
 	return 0;

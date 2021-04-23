@@ -41,5 +41,6 @@ void cursorUpdateXep(unsigned char x, unsigned char y);
 void drawCharsAtXep(unsigned char *buffer, unsigned char bufferLen);
 void insertLineXep(unsigned char y, unsigned char yBottom);
 void deleteLineXep(unsigned char y, unsigned char yBottom);
+unsigned char XEP80Test(void);
 
 #endif 

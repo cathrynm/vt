@@ -36,7 +36,6 @@ void processChar(unsigned char c, unsigned char *err);
 unsigned char initChio(void);
 void handleInput(unsigned char *err);
 unsigned char closeChio(void);
-unsigned char isXep80(void);
 unsigned char isIntl(void);
 void setFullAscii(unsigned char fullAscii);
 unsigned char errUpdate(unsigned char err, unsigned char *oldErr);
@@ -48,6 +47,7 @@ unsigned char anyKey(void);
 unsigned char getline(unsigned char *buf, unsigned char len, unsigned char *err);
 void drawString(unsigned char *s);
 void drawChar(unsigned char ch);
+void initAscii(unsigned char fontBase);
 
 extern unsigned char *eColon;
 extern unsigned char clearScreenChar;

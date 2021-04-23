@@ -14,6 +14,7 @@
 #include "serial.h"
 #include "sio.h"
 #include "io.h"
+#include "detect.h"
 
 #define cio(iocb)			\
 	(__AX__ = (iocb),		\

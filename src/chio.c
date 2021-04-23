@@ -8,20 +8,14 @@ struct chioDataStruct {
 	unsigned char utfIndex;
 	unsigned short utfWord;
 	unsigned long utfLong; // Super slow on 6502, but these are rare, so whatever.
-	unsigned char osType;
 	unsigned char *keyTab;
-	unsigned char chbas; // Original character set coming in here.
-	unsigned char fullAscii; // {}~` characters are copied in.
-	unsigned char xep80;
 };
 
 chioStruct chio;
 unsigned char *eColon = "E:";
 unsigned char clearScreenChar = CH_CLR;
 
-unsigned char isXep80(void) {
-	return chio.xep80;
-}
+
 
 void drawChar(unsigned char ch)
 {
@@ -38,20 +32,12 @@ void drawString(unsigned char *s)
 
 unsigned char isIntl(void)
 {
-	return (chio.chbas == 204);
-}
-
-void setFullAscii(unsigned char fullAscii)
-{
-	chio.fullAscii = fullAscii;
+	return (detect.chbas == 204);
 }
 
 unsigned char closeChio(void)
 {
 	unsigned char err = ERR_NONE;
-	if (chio.fullAscii) {
-		OS.chbas = chio.chbas;
-	}
 	OS.iocb[2].command = IOCB_CLOSE;
 	cio(2);
 	iocbErrUpdate(2, &err);
@@ -100,7 +86,7 @@ void convertLongToVisibleChar(unsigned long c, unsigned char *ch, unsigned char 
 void convertAsciiToVisibleChar(unsigned char *ch, unsigned char *attrib)
 {
 	if ((*ch >= 32 && *ch <=95) || (*ch >= 97 && *ch <= 122) || (*ch == 124))return;
-	if (chio.fullAscii && ((*ch == 116) || (*ch == 123) || (*ch == 125) || (*ch == 126)))return;
+	if (detect.fullAscii && ((*ch == 116) || (*ch == 123) || (*ch == 125) || (*ch == 126)))return;
 	*attrib = ERRATTRIB;  // Atari are missing { } ` ~.  Show as undrawable.  127, 0-31 are undrawable anyway.
 	*ch = ERRCHAR;
 }
@@ -139,12 +125,6 @@ void convertAsciiToVisibleChar(unsigned char *ch, unsigned char *attrib)
 #define XEPICH_LADOT 29
 #define XEPICH_LUDOTS 30
 #define XEPICH_LOE 31
-
-
-
-
-
-
 
 void convertShortToVisibleChar(unsigned short c, unsigned char *ch, unsigned char *attrib)
 {
@@ -636,7 +616,7 @@ unsigned char getChar(unsigned char *err)
 
 void click(void) {
 	unsigned char n;
-	if (chio.osType < 2 || !OS.noclik) {
+	if (detect.osType < 2 || !OS.noclik) {
 		for (n = 0;n<128;n++) {
 			GTIA_READ.consol = 0x7f;
 			ANTIC.wsync = 0x7f;
@@ -650,7 +630,7 @@ unsigned char isKeyReady(void) {
 	if (ch < 0xc0) {
 		if (!chio.keyTab) return 1;
 		code = chio.keyTab[ch];
-		if (chio.osType >= 2 && code >= AKEY_F1 && code <= AKEY_F4)
+		if (detect.osType >= 2 && code >= AKEY_F1 && code <= AKEY_F4)
 			code = OS.fkdef[code - AKEY_F1];
 		if ((code != AKEY_NULL) && (code != AKEY_ATR) && (code != AKEY_CLOW) && (code != AKEY_SCLOW) &&
 			(code != AKEY_CCLOW) && (code != AKEY_CLICKTOG))return 1; // Shift functions turn into arrow keys with the 'super set' 
@@ -672,7 +652,7 @@ unsigned char isKeyReady(void) {
 			OS.shflok = 0x80;
 			break;
 		case AKEY_CLICKTOG:
-			if (chio.osType >= 2) OS.noclik ^= 0xff;
+			if (detect.osType >= 2) OS.noclik ^= 0xff;
 			break;
 		default:
 			break;
@@ -827,55 +807,23 @@ void memClear(unsigned char *top, unsigned short len)
 
 void initAscii(unsigned char fontBase) {
 	unsigned char *top  = (unsigned char *)(fontBase << 8);
-	memCopy( top,  (unsigned char *) (OS.chbas <<8), 128 * 8);
+	memCopy( top,  (unsigned char *) (detect.chbas <<8), 128 * 8);
 	memCopy(&top[96 * 8], bapost, 8);
 	memCopy(&top[123 * 8], lCurly, 8);
 	memCopy(&top[125 * 8], rCurly, 8);
 	memCopy(&top[126 * 8], tilda, 8);
 	memCopy(&top[127 * 8], hashBox, 8);
 	OS.chbas = fontBase;
-	chio.fullAscii = 1;
-}
-
-
-
-unsigned char XEP80Test(void)
-{
-	unsigned char err;
-	if (OS.rmargn >= 0x40) {
-		err = ERR_NONE;
-		OS.rowcrs = 0;OS.colcrs = OS.lmargn;
-		drawChar(CH_ESC);drawChar(255);
-		OS.iocb[0].buffer = eColon;
-		OS.iocb[0].buflen = strlen(eColon);
-		OS.iocb[0].aux1 = 12;
-		OS.iocb[0].aux2 = 245;
-		OS.iocb[0].command = 20;
-		cio(0);
-		iocbErrUpdate(0, &err);
-		return err == ERR_NONE;
-	}
-	return 0;
+	detect.fullAscii = 1;
 }
 
 unsigned char initChio(void) // Don't use malloc from here.
 {
 	unsigned char err = ERR_NONE;
-	unsigned short startAddress = (unsigned short)_STARTADDRESS__; // Start the program on 0x400 boundary.  So 0x400 below is good
-	memClear((unsigned char *)&chio, sizeof(chio));
-	chio.xep80 = XEP80Test();
-	chio.chbas = OS.chbas;
-	if (((unsigned short) OS.memlo + 0x400 <= startAddress) && !chio.xep80) {
-		startAddress -= 0x400;
-		initAscii(startAddress >> 8);
-	}
-
-	if ((unsigned short) OS.memlo < startAddress)
-		_heapadd(OS.memlo, startAddress - (unsigned short) OS.memlo); // recover memory below font and above lomem
-
+	memset((unsigned char *)&chio, 0, sizeof(chio));
 	chio.utfType  = 0;
-	chio.osType = get_ostype() & AT_OS_TYPE_MAIN;
-	if (chio.osType >= 2) chio.keyTab = OS.keydef;
+
+	if (detect.osType >= 2) chio.keyTab = OS.keydef;
 	else  {
 		chio.keyTab = (unsigned char *)0xfefe;  // Into the OS, but I think there's
 		if ((chio.keyTab[0] != 0x6c) || (chio.keyTab[1] != 0x6a) || (chio.keyTab[2] != 0x3B)) {

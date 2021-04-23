@@ -8,9 +8,7 @@
 
 
 typedef struct {
-	unsigned char logMapTrick;
 	unsigned char bufferLen, bufferX, bufferY;
-	unsigned char directDraw;
 	unsigned char clearBuffer[SCREENCOLUMNS];
 	unsigned char buffer[SCREENCOLUMNS];
 	void (*eColonSpecial)();
@@ -54,19 +52,6 @@ void callEColonPutBytes(unsigned char *buf, unsigned char len)
 	cio(0);
 }
 
-
-unsigned char logMapTrickTest(void)
-{
-	static const unsigned char drawTest[]  = {CH_CLR, CH_CURS_LEFT, ' '};
-	static const unsigned char drawTest2[] = {CH_CURS_RIGHT, CH_CURS_LEFT};
-	OS.dspflg = 0;
-	OS.logmap[0] = 0xff - (1 << (7-1));
-	callEColonPutBytes((unsigned char *)drawTest, 3);
-	OS.logmap[0] = 0xff;
-	callEColonPutBytes((unsigned char *)drawTest2, 2);
-	return (OS.logcol == OS.lmargn);  // IF logmap trick works, then a line is not inserted here.
-}
-
 void initScreen(void)
 {
 	devhdl_t *devhdl;
@@ -82,15 +67,11 @@ void initScreen(void)
 		screen.eColonSpecial =  (void (*)(void)) ( (unsigned short) devhdl->special + 1);
 		break;
 	}
-	if (isXep80()) {
+	if (detect.videoMode == 'X') {
 		initXep();
 	}
-	screen.directDraw = directDrawTest();
-	if (screen.directDraw) {
+	if (detect.videoMode == 'D') {
 		initDirect();
-	}
-	if (!isXep80() && !screen.directDraw) {
-		screen.logMapTrick = logMapTrickTest(); // Spartdos gr8 80 col doesn't do this.  Maybe it could?
 	}
 	drawClearScreen();
 }
@@ -98,7 +79,7 @@ void initScreen(void)
 void screenRestore(void)
 {
 	flushBuffer();
-	if (isXep80()) {
+	if (detect.videoMode == 'X') {
 		restoreXep();
 	}
 
@@ -111,7 +92,7 @@ void drawClearScreen(void)
 	unsigned char y;
 	cursorHide();
 	flushBuffer();
-	if (isXep80()) {
+	if (detect.videoMode == 'X') {
 		clearScreenXep();
 	} else {
 		OS.dspflg = 0;
@@ -135,7 +116,7 @@ void cursorUpdate(unsigned char x, unsigned char y)
 	}
 	flushBuffer();
 	if ((OS.crsinh == 0) && (OS.colcrs == x + OS.lmargn) && (OS.rowcrs == y))return;
-	if (isXep80()) {
+	if (detect.videoMode == 'X') {
 		cursorUpdateXep(x, y);
 		return;
 	}
@@ -154,14 +135,14 @@ void drawCharsAt(unsigned char *buffer, unsigned char bufferLen, unsigned char x
 	unsigned char logMapTouch = 0, xp;
 	if ((x >= screenX.screenWidth) || !bufferLen)return;
 	if (x + bufferLen > screenX.screenWidth)bufferLen = screenX.screenWidth - x;
-	if (screen.directDraw) {
+	if (detect.videoMode == 'D') {
 		writeScreen(buffer, bufferLen, x, y);
 		return;
 	}
 	OS.dspflg = 1;
 	OS.rowcrs = y;
 	OS.colcrs = x;
-	if (isXep80()) {
+	if (detect.videoMode == 'X') {
 		drawCharsAtXep(buffer, bufferLen);
 		return;
 	}
@@ -169,7 +150,7 @@ void drawCharsAt(unsigned char *buffer, unsigned char bufferLen, unsigned char x
 		callEColonPutBytes(buffer, bufferLen);
 		return;
 	}
-	if (screen.logMapTrick && (y < SCREENLINES-1)) {
+	if ((detect.videoMode == 'A') && (y < SCREENLINES-1)) {
 		logMapTouch = y + 1;
 		OS.logmap[logMapTouch >> 3] &= ~(1 << (7-( logMapTouch & 7))); // Fake out OS, tell it next line is continuation, just for this. 
 		callEColonPutBytes(buffer, bufferLen);
@@ -250,12 +231,12 @@ void drawClearLine(unsigned char y)
 void drawInsertLine(unsigned char y, unsigned char yBottom)
 {
 	unsigned char yp;
-	if (isXep80()) {
+	if (detect.videoMode == 'X') {
 		insertLineXep(y, yBottom);
 		return;
 	}
 	flushBuffer();
-	if (screen.directDraw) {
+	if (detect.videoMode == 'D') {
 		directScrollDown(y, yBottom);
 	} else {
 		OS.dspflg = 0;
@@ -275,12 +256,12 @@ void drawInsertLine(unsigned char y, unsigned char yBottom)
 void drawDeleteLine(unsigned char y, unsigned char yBottom)
 {
 	unsigned char yp;
-	if (isXep80()) {
+	if (detect.videoMode == 'X') {
 		deleteLineXep(y, yBottom);
 		return;
 	}
 	flushBuffer();
-	if (screen.directDraw) {
+	if (detect.videoMode == 'D') {
 		directScrollUp(y, yBottom);
 	} else {
 		OS.dspflg = 0;
@@ -301,7 +282,7 @@ void drawInsertChar(unsigned char x, unsigned char y)
 {
 	if ((x >= screenX.screenWidth) || (x >= screenX.lineLength[y]))return;
 	flushBuffer();
-	if (isXep80()) {
+	if (detect.videoMode == 'X') {
 		insertCharXep(x, y);
 		return;
 	}
@@ -317,7 +298,7 @@ void drawDeleteChar(unsigned char x, unsigned char y)
 	static unsigned char ch = CH_DELCHR;
 	if ((x >= screenX.screenWidth) || (x >= screenX.lineLength[y]))return;
 	flushBuffer();
-	if (isXep80()) {
+	if (detect.videoMode == 'X') {
 		deleteCharXep(x, y);
 		return;
 	}
