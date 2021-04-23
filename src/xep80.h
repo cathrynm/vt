@@ -27,15 +27,12 @@
 
 unsigned char isXep80Internal(void);
 void xepCursorShadow(void);
-void setXEPLastChar(unsigned char c);
-void setXEPCommand(unsigned char c, unsigned char command);
 void initXep(void);
 void restoreXep(void);
 void clearScreenXep(void);
 void deleteCharXep(unsigned char x, unsigned char y);
 void insertCharXep(unsigned char x, unsigned char y);
 unsigned char setXepCharSet(unsigned char which);
-void setXepRowPtr(unsigned char y, unsigned char val);
 unsigned char isXep80Internal(void);
 void cursorUpdateXep(unsigned char x, unsigned char y);
 void drawCharsAtXep(unsigned char *buffer, unsigned char bufferLen);

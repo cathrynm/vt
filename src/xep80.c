@@ -31,7 +31,7 @@ unsigned char isXep80Internal(void) {
 	return xep.xepCharset == XEPCH_INTERN;
 }
 
-void setXEPXPos(unsigned char hpos) {
+void __fastcall__ setXEPXPos(unsigned char hpos) {
 	if (hpos < 80) {
 		callEColonSpecial(20, 12, XEP_SETCURSORHPOS | hpos);
 	} else {
@@ -41,7 +41,7 @@ void setXEPXPos(unsigned char hpos) {
 	xep.currentXepX = hpos;
 }
 
-void setXEPYPos(unsigned char y) {
+void __fastcall__ setXEPYPos(unsigned char y) {
 	callEColonSpecial(20, 12, XEP_SETCURSORVPOS + y);
 }
 
@@ -52,7 +52,7 @@ void setXEPYPos(unsigned char y) {
 // But in burst mode, current cursor position is mostly just wrong, so set the hardware.
 // This code never sends any CIO commands that affect Y.
 
-void xepCursorShadow(void)
+void __fastcall__ xepCursorShadow(void)
 {
 	if (OS.colcrs == xep.xepX) {
 		if (xep.xepX != xep.currentXepX) {
@@ -63,7 +63,7 @@ void xepCursorShadow(void)
 	}
 }
 
-void setXEPLastChar(unsigned char c)
+void __fastcall__ setXEPLastChar(unsigned char c)
 { // 80 = cr
 	OS.dspflg = 1;
 	OS.rowcrs = XEPLINES-1;
@@ -74,13 +74,13 @@ void setXEPLastChar(unsigned char c)
 	xep.currentXepX = OS.colcrs;
 }
 
-void setXEPCommand(unsigned char c, unsigned char command)
+void __fastcall__ setXEPCommand(unsigned char c, unsigned char command)
 {
 	setXEPLastChar(c);
 	callEColonSpecial(20, 12, command);
 }
 
-void setXEPExtraByte(unsigned char c)
+void __fastcall__ setXEPExtraByte(unsigned char c)
 {
 	setXEPCommand(c, XEP_SETEXTRABYTE);
 }
@@ -94,14 +94,14 @@ void drawXEPCharAt(unsigned char c, unsigned char x, unsigned char y)
 	callEColonSpecial(20, 12, XEP_WRITEBYTE);
 }
 
-void setXepRowPtr(unsigned char y, unsigned char val) {
+void __fastcall__ setXepRowPtr(unsigned char y, unsigned char val) {
 	setXEPExtraByte(y + 0x20);
 	setXEPLastChar(val);
 	callEColonSpecial(20, 12, XEP_WRITEINTERNALBYTE);
 	xep.xepLines[y] = val;
 }
 
-void setXEPRMargin(unsigned char x) {
+void __fastcall__ setXEPRMargin(unsigned char x) {
 	OS.iocb[0].buffer = eColon;
 	OS.iocb[0].buflen = 2;
 	if ((x >= 0x40) && (x < 0x50)) {
