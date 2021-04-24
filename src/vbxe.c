@@ -127,7 +127,6 @@ vbxeStruct vbxe;
 
 #define XDLC    (XDLC_TMON+XDLC_RPTL+XDLC_OVADR+XDLC_CHBASE+XDLC_OVATT+XDLC_END)
 
-static unsigned char sAtascii[4] = {0x40, 0x00, 0x20, 0x60};
 static unsigned char xdl[] = { (XDLC % 256), (XDLC / 256), 
 	       215, 0x20, 0x0E, 0x00, 160, 0, 1, 1, 255 };
 
@@ -157,6 +156,45 @@ unsigned char vbxeTest(void)
     return 0;
 }
 
+void initBlit(void)
+{
+    blitterStruct *blitter = (blitterStruct *) 0x4100;
+    blitter->source_adr = 0; 
+    blitter->source_adr2 = 0;
+    blitter->source_step_y_0 = 0;
+    blitter->source_step_y_1 = 0;
+    blitter->source_step_x = 1;
+    blitter->dest_adr = 0;
+    blitter->dest_adr2 = 0;
+    blitter->dest_step_y_0 = 0;
+    blitter->dest_step_y_1 = 0;
+    blitter->dest_step_x = 1;
+    blitter->blt_width = 0;
+    blitter->blt_height = 0; 
+    blitter->blt_and_mask = 0xff;
+    blitter->blt_xor_mask = 0;
+    blitter->blt_control = 0; // Next = 0 Mode = 0 (Copy)
+    blitter->blt_zoom = 0;
+    vbxe.regs->BL_ADR0 = 0;
+    vbxe.regs->BL_ADR1 = 0x1;
+    vbxe.regs->BL_ADR2 = 0;
+}
+
+void blit(unsigned short dest, unsigned short source, unsigned char wid, unsigned char hi)
+{
+    static blitterStruct *blitter = (blitterStruct *) 0x4100;
+    while (vbxe.regs->BLITTER_BUSY);
+    vbxe.regs->MEMAC_BANK_SEL = 0x80;
+    blitter->source_adr = source;
+    blitter->source_step_y_0 = wid << 1;
+    blitter->dest_adr = dest;
+    blitter->dest_step_y_0 = wid << 1;
+    blitter->blt_width = wid << 1;
+    blitter->blt_height = hi - 1;
+    blitter->blt_and_mask = (source != 0)? 0xff: 0;
+    vbxe.regs->BLITTER_START = 1;
+    vbxe.regs->MEMAC_BANK_SEL = 0;
+}
 
 void initVbxe(void)
 {
@@ -174,39 +212,12 @@ void initVbxe(void)
     vbxe.regs->XDL_ADR2 = 0x00;
     // turn on XDL processing
     vbxe.regs->VIDEO_CONTROL = 0x01;
+    initBlit();
     vbxe.regs->MEMAC_BANK_SEL = 0x0;
     for (y = 0;y< SCREENLINES;y++) {
         screenX.lineTab[y] = (unsigned short) y * 160;
     }
     OS.sdmctl = 0;
-}
-
-void blit(unsigned short dest, unsigned short source, unsigned char wid, unsigned char hi)
-{
-    blitterStruct *blitter = (blitterStruct *) 0x4100;
-    while (vbxe.regs->BLITTER_BUSY);
-    vbxe.regs->MEMAC_BANK_SEL = 0x80;
-    blitter->source_adr = source;
-    blitter->source_adr2 = 0;
-    blitter->source_step_y_0 = wid << 1;
-    blitter->source_step_y_1 = 0;
-    blitter->source_step_x = 1;
-    blitter->dest_adr = dest;
-    blitter->dest_adr2 = 0;
-    blitter->dest_step_y_0 = wid << 1;
-    blitter->dest_step_y_1 = 0;
-    blitter->dest_step_x = 1;
-    blitter->blt_width = wid << 1;
-    blitter->blt_height = hi - 1;
-    blitter->blt_and_mask = (source != 0)? 0xff: 0;
-    blitter->blt_xor_mask = 0;
-    blitter->blt_control = 0; // Next = 0 Mode = 0 (Copy)
-    blitter->blt_zoom = 0;
-    vbxe.regs->BL_ADR0 = 0;
-    vbxe.regs->BL_ADR1 = 0x1;
-    vbxe.regs->BL_ADR2 = 0;
-    vbxe.regs->BLITTER_START = 1;
-    vbxe.regs->MEMAC_BANK_SEL = 0;
 }
 
 void restoreVbxe(void)

@@ -125,7 +125,6 @@ void cursorHide(void)
 	OS.crsinh = 1;
 }
 
-
 void cursorUpdate(unsigned char x, unsigned char y)
 {
 	if (x >= screenX.screenWidth || y >= SCREENLINES) {
@@ -134,6 +133,8 @@ void cursorUpdate(unsigned char x, unsigned char y)
 	}
 	flushBuffer();
 	if ((OS.crsinh == 0) && (OS.colcrs == x + OS.lmargn) && (OS.rowcrs == y))return;
+	OS.crsinh = 0;
+	OS.colcrs = x + OS.lmargn;
 	switch(detect.videoMode) {
 		case 'X':
 			cursorUpdateXep(x, y);
@@ -142,13 +143,11 @@ void cursorUpdate(unsigned char x, unsigned char y)
 			cursorUpdateVbxe(x, y);
 			break;
 		default:
-			OS.crsinh = 0;
-			OS.colcrs = x + OS.lmargn;
 			if (OS.colcrs < OS.rmargn)OS.colcrs++;
 			else OS.colcrs = OS.lmargn;
 			OS.rowcrs = y;
 			OS.dspflg = 0;
-			callEColonPutByte( CH_CURS_LEFT);
+			callEColonPutByte(CH_CURS_LEFT);
 			break;
 	}
 }
@@ -164,7 +163,7 @@ void drawCharsAt(unsigned char *buffer, unsigned char bufferLen, unsigned char x
 	OS.colcrs = x;
 	switch(detect.videoMode) {
 		case 'D':
-			writeScreen(buffer, bufferLen, x, y);
+			drawCharsAtDirect(buffer, bufferLen);
 			break;
 		case 'X':
 			drawCharsAtXep(buffer, bufferLen);
@@ -262,7 +261,7 @@ void drawInsertLine(unsigned char y, unsigned char yBottom)
 			insertLineXep(y, yBottom);
 			break;
 		case 'D':
-			directScrollDown(y, yBottom);
+			insertLineDirect(y, yBottom);
 			break;
 		case 'V':
 			insertLineVbxe(y, yBottom);
@@ -292,7 +291,7 @@ void drawDeleteLine(unsigned char y, unsigned char yBottom)
 			deleteLineXep(y, yBottom);
 			break;
 		case 'D':
-			directScrollUp(y, yBottom);
+			deleteLineDirect(y, yBottom);
 			break;
 		case 'V':
 			deleteLineVbxe(y, yBottom);

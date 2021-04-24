@@ -5,14 +5,12 @@ typedef struct {
 } directStruct;
 
 directStruct direct;
+unsigned char sAtascii[4] = {0x40, 0x00, 0x20, 0x60};
 
-void writeScreen(unsigned char *s, unsigned char len, unsigned char x, unsigned char y)
+void drawCharsAtDirect(unsigned char *s, unsigned char len)
 {
-	static unsigned char sAtascii[4] = {0x40, 0x00, 0x20, 0x60};
 	unsigned char *p, *pStart, c;
-	pStart = OS.savmsc + x + screenX.lineTab[y];
-	if (len > screenX.screenWidth - x)len = screenX.screenWidth - x;
-
+	pStart = OS.savmsc + OS.colcrs + screenX.lineTab[OS.rowcrs];
 	for (p = pStart;len--;) {
 		c = *s++;
 		*p++ = sAtascii[(c & 0x60) >> 5] | (c & 0x9f);
@@ -24,7 +22,7 @@ void writeScreen(unsigned char *s, unsigned char len, unsigned char x, unsigned 
 }
 
 
-void directScrollUp(unsigned char topY, unsigned char bottomY)
+void deleteLineDirect(unsigned char topY, unsigned char bottomY)
 {
 	unsigned char y, len;
 	unsigned char *p, *pStart, *pEnd, *pBottom;
@@ -51,7 +49,7 @@ void directScrollUp(unsigned char topY, unsigned char bottomY)
 	}
 }
 
-void directScrollDown(unsigned char topY, unsigned char bottomY)
+void insertLineDirect(unsigned char topY, unsigned char bottomY)
 {
 	unsigned char *pStart, *pEnd;
 	pStart = OS.savmsc + screenX.lineTab[topY];
