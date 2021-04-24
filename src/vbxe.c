@@ -125,6 +125,7 @@ vbxeStruct vbxe;
 
 #define XDLC    (XDLC_TMON+XDLC_RPTL+XDLC_OVADR+XDLC_CHBASE+XDLC_OVATT+XDLC_END)
 
+static unsigned char sAtascii[4] = {0x40, 0x00, 0x20, 0x60};
 static unsigned char xdl[] = { (XDLC % 256), (XDLC / 256), 
 	       215, 0x20, 0x0E, 0x00, 160, 0, 1, 1, 255 };
 
@@ -192,7 +193,7 @@ void blit(unsigned short dest, unsigned short source, unsigned char wid, unsigne
     blitter->dest_step_x = 1;
     blitter->blt_width = wid << 1;
     blitter->blt_height = hi - 1;
-    blitter->blt_and_mask = 0xff;
+    blitter->blt_and_mask = (source != 0)? 0xff: 0;
     blitter->blt_xor_mask = 0;
     blitter->blt_control = 0; // Next = 0 Mode = 0 (Copy)
     blitter->blt_zoom = 0;
@@ -225,7 +226,7 @@ void cursorUpdateVbxe(unsigned char x, unsigned char y)
 void drawCharsAtVbxe(unsigned char *s, unsigned char len)
 {
     unsigned char *p, *pStart, c;
-    static unsigned char sAtascii[4] = {0x40, 0x00, 0x20, 0x60};
+
     pStart = (unsigned char *) 0x4000 + screenX.lineTab[OS.rowcrs] + (OS.colcrs << 1);
     vbxe.regs->MEMAC_BANK_SEL = 0x81;
     for (p = pStart;len--;) {
@@ -241,21 +242,41 @@ void insertLineVbxe(unsigned char y, unsigned char yBottom)
     if (y < yBottom) {
         blit(0x1000 + screenX.lineTab[y + 1] , 0x1000 + screenX.lineTab[y], 80, yBottom - y);
     }
+    blit(0x1000 + screenX.lineTab[y] , 0,  80, 1);
 }
 
 void deleteLineVbxe(unsigned char y, unsigned char yBottom)
 {
-     if (y < yBottom) {
+    if (y < yBottom) {
         blit(0x1000 + screenX.lineTab[y] , 0x1000 + screenX.lineTab[y+1], 80, yBottom - y);
     }
+    blit(0x1000 + screenX.lineTab[yBottom] , 0,  80, 1);
 }
 
 void insertCharVbxe(unsigned char x, unsigned char y)
 {
+    unsigned char *pStart;
+    if (x < 79) {
+        blit(0x1000 + screenX.lineTab[y] + x, 0x1000 + screenX.lineTab[y+1] + 1, 79-x, 1);
+    }
+    pStart = (unsigned char *) 0x4000 + screenX.lineTab[y] + (x << 1);
+    vbxe.regs->MEMAC_BANK_SEL = 0x81;
+    *pStart++ = 0;
+    *pStart = 0;
+    vbxe.regs->MEMAC_BANK_SEL = 0x81;
 }
 
 void deleteCharVbxe(unsigned char x, unsigned char y)
 {
+    unsigned char *pStart;
+    if (x < 79) {
+        blit(0x1000 + screenX.lineTab[y] + x + 1, 0x1000 + screenX.lineTab[y+1], 79-x, 1);
+    }
+    pStart = (unsigned char *) 0x4000 + screenX.lineTab[y] + (79 << 1);
+    vbxe.regs->MEMAC_BANK_SEL = 0x81;
+    *pStart++ = 0;
+    *pStart = 0;
+    vbxe.regs->MEMAC_BANK_SEL = 0x81;
 }
 
 // Try attrib 0x23 and 0xf
