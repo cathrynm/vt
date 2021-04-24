@@ -1,15 +1,71 @@
 #include "main.h"
 
+#define VBXE_WIDTH 80
+#define VBXE_HEIGHT 24
+#define VBXE_BANKTOP 0x4000
+
+#define VBXE_BANKSHIFT 12
+#define VBXE_BANKSIZE (1<<VBXE_BANKSHIFT) // 0x1000
+#define VBXE_BANKMASK (VBXE_BANKSIZE-1) // 0xfff
+
+#define VBXE_XDLADDR 0x0000
+#define VBXE_XDLBANK ((VBXE_XDLADDR >> VBXE_BANKSHIFT) | 0x80)
+#define VBXE_XDLMEM ((unsigned char *)(VBXE_BANKTOP + (VBXE_XDLADDR & VBXE_BANKMASK)))
+
+#define VBXE_BLITADDR 0x0100 // address in VBXE memory of blitter data
+#define VBXE_BLITBANK ((VBXE_BLITADDR >> VBXE_BANKSHIFT) | 0x80) // Bank of VBXE blitter
+#define VBXE_BLITMEM ((blitterStruct *)(VBXE_BANKTOP + (VBXE_BLITADDR & VBXE_BANKMASK))) // 6502 address of blitter memory
+
+#define VBXE_FONTADDR 0x0800
+#define VBXE_FONTBANK ((VBXE_FONTADDR >> VBXE_BANKSHIFT) | 0x80)
+#define VBXE_FONTMEM ((unsigned char *)(VBXE_BANKTOP + (VBXE_FONTADDR & VBXE_BANKMASK)))
+
+#define VBXE_SCREENADDR 0x1000 // address in VBXE memory of screen
+#define VBXE_SCREENBANK ((VBXE_SCREENADDR >> VBXE_BANKSHIFT) | 0x80) // Bank of VBXE Screen memory
+#define VBXE_SCREENMEM ((unsigned char *)(VBXE_BANKTOP + (VBXE_SCREENADDR & VBXE_BANKMASK))) // 6502 address of Screen
+
+
+// Order of XDL data (if required)
+// XDLC_RPTL    (1 byte)
+// XDLC_OVADR   (5 bytes)
+// XDLC_OVSCRL  (2 bytes)
+// XDLC_CHBASE  (1 byte)
+// XDLC_MAPADR  (5 bytes)
+// XDLC_MAPPAR  (4 bytes)
+// XDLC_OVATT   (2 bytes)
+
+#define XDLC_TMON       0x0001
+#define XDLC_GMON       0x0002
+#define XDLC_OVOFF      0x0004
+#define XDLC_MAPON      0x0008
+#define XDLC_MAPOFF     0x0010
+#define XDLC_RPTL       0x0020
+#define XDLC_OVADR      0x0040
+#define XDLC_OVSCRL     0x0080
+#define XDLC_CHBASE     0x0100
+#define XDLC_MAPADR     0x0200
+#define XDLC_MAPPAR     0x0400
+#define XDLC_OVATT      0x0800
+#define XDLC_HR         0x1000
+#define XDLC_LR         0x2000
+// 0x4000 is reserved
+#define XDLC_END        0x8000
+
 typedef struct {
     union {
         unsigned char VIDEO_CONTROL;
         unsigned char CORE_VERSION;
     };
     union {
-        unsigned char XDL_ADR0;
-        unsigned char MINOR_REVISION;
+        struct {
+            union {
+                unsigned char XDL_ADR0;
+                unsigned char MINOR_REVISION;
+            };
+            unsigned char XDL_ADR1;
+        };
+        unsigned short XDL_ADR;
     };
-    unsigned char XDL_ADR1;
     unsigned char XDL_ADR2;
     unsigned char CSEL;
     unsigned char PSEL;
@@ -86,36 +142,6 @@ typedef struct {
     unsigned char blt_control;
 } blitterStruct;
 
-
-//* XDL
-//
-// Order of XDL data (if required)
-//
-// XDLC_RPTL    (1 byte)
-// XDLC_OVADR   (5 bytes)
-// XDLC_OVSCRL  (2 bytes)
-// XDLC_CHBASE  (1 byte)
-// XDLC_MAPADR  (5 bytes)
-// XDLC_MAPPAR  (4 bytes)
-// XDLC_OVATT   (2 bytes)
-
-#define XDLC_TMON       0x0001
-#define XDLC_GMON       0x0002
-#define XDLC_OVOFF      0x0004
-#define XDLC_MAPON      0x0008
-#define XDLC_MAPOFF     0x0010
-#define XDLC_RPTL       0x0020
-#define XDLC_OVADR      0x0040
-#define XDLC_OVSCRL     0x0080
-#define XDLC_CHBASE     0x0100
-#define XDLC_MAPADR     0x0200
-#define XDLC_MAPPAR     0x0400
-#define XDLC_OVATT      0x0800
-#define XDLC_HR         0x1000
-#define XDLC_LR         0x2000
-// 0x4000 is reserved
-#define XDLC_END        0x8000
-
 typedef struct {
     unsigned char sdmctl;
     unsigned char MEMAC_CONTROL;
@@ -158,7 +184,7 @@ unsigned char vbxeTest(void)
 
 void initBlit(void)
 {
-    blitterStruct *blitter = (blitterStruct *) 0x4100;
+    blitterStruct *blitter = VBXE_BLITMEM;
     blitter->source_adr = 0; 
     blitter->source_adr2 = 0;
     blitter->source_step_y_0 = 0;
@@ -182,9 +208,9 @@ void initBlit(void)
 
 void blit(unsigned short dest, unsigned short source, unsigned char wid, unsigned char hi)
 {
-    static blitterStruct *blitter = (blitterStruct *) 0x4100;
+    blitterStruct *blitter = VBXE_BLITMEM;
     while (vbxe.regs->BLITTER_BUSY);
-    vbxe.regs->MEMAC_BANK_SEL = 0x80;
+    vbxe.regs->MEMAC_BANK_SEL = VBXE_BLITBANK;
     blitter->source_adr = source;
     blitter->source_step_y_0 = wid << 1;
     blitter->dest_adr = dest;
@@ -199,23 +225,18 @@ void blit(unsigned short dest, unsigned short source, unsigned char wid, unsigne
 void initVbxe(void)
 {
     unsigned char y;
-    OS.appmhi = ((unsigned char *)OS.memtop) - 0x1000;
-    vbxe.regs->MEMAC_CONTROL = 0x48;       // 4k banks, CPU only, $4000
-    vbxe.regs->MEMAC_BANK_SEL = 0x80;      // bank zero
-    // copy font to $0800 VBXE memory, bank 0
-    memcpy((unsigned char *)0x4800, (unsigned char*)0xE000, 1024); // 
-    // copy XDL to VBXE memory, bank 0
-    memcpy((unsigned char *)0x4000, xdl, 11);
-    // set XDL address
-    vbxe.regs->XDL_ADR0 = 0x00;
-    vbxe.regs->XDL_ADR1 = 0x00;
-    vbxe.regs->XDL_ADR2 = 0x00;
+    vbxe.regs->MEMAC_CONTROL = (VBXE_BANKTOP >> 8) | 0x8;       // 4k banks, CPU only, $4000
+    vbxe.regs->MEMAC_BANK_SEL = VBXE_XDLBANK;
+    memcpy(VBXE_FONTMEM, (unsigned char*)0xE000, 1024); // 
+    memcpy(VBXE_XDLMEM, xdl, 11);
+    vbxe.regs->XDL_ADR = VBXE_XDLADDR;
+    vbxe.regs->XDL_ADR2 = 0;
     // turn on XDL processing
     vbxe.regs->VIDEO_CONTROL = 0x01;
     initBlit();
     vbxe.regs->MEMAC_BANK_SEL = 0x0;
-    for (y = 0;y< SCREENLINES;y++) {
-        screenX.lineTab[y] = (unsigned short) y * 160;
+    for (y = 0;y < SCREENLINES;y++) {
+        screenX.lineTab[y] = (unsigned short) y * VBXE_WIDTH * 2;
     }
     OS.sdmctl = 0;
 }
@@ -241,9 +262,7 @@ void restoreVbxe(void)
 
 void clearScreenVbxe(void)
 {
-    vbxe.regs->MEMAC_BANK_SEL = 0x81;
-    memset((unsigned char *) 0x4000, 0, 3180);
-    vbxe.regs->MEMAC_BANK_SEL = 0x0;
+    blit(VBXE_SCREENADDR, 0, VBXE_WIDTH, VBXE_HEIGHT);
 }
 
 void cursorUpdateVbxe(unsigned char x, unsigned char y)
@@ -253,9 +272,8 @@ void cursorUpdateVbxe(unsigned char x, unsigned char y)
 void drawCharsAtVbxe(unsigned char *s, unsigned char len)
 {
     unsigned char *p, *pStart, c;
-
-    pStart = (unsigned char *) 0x4000 + screenX.lineTab[OS.rowcrs] + (OS.colcrs << 1);
-    vbxe.regs->MEMAC_BANK_SEL = 0x81;
+    pStart = VBXE_SCREENMEM + screenX.lineTab[OS.rowcrs] + (OS.colcrs << 1);
+    vbxe.regs->MEMAC_BANK_SEL = VBXE_SCREENBANK;
     for (p = pStart;len--;) {
         c = *s++;
         *p++ = sAtascii[(c & 0x60) >> 5] | (c & 0x9f);
@@ -267,43 +285,41 @@ void drawCharsAtVbxe(unsigned char *s, unsigned char len)
 void insertLineVbxe(unsigned char y, unsigned char yBottom)
 {
     if (y < yBottom) {
-        blit(0x1000 + screenX.lineTab[y + 1] , 0x1000 + screenX.lineTab[y], 80, yBottom - y);
+        blit(VBXE_SCREENADDR + screenX.lineTab[y + 1], VBXE_SCREENADDR + screenX.lineTab[y], VBXE_WIDTH, yBottom - y);
     }
-    blit(0x1000 + screenX.lineTab[y] , 0,  80, 1);
+    blit(VBXE_SCREENADDR + screenX.lineTab[y], 0, VBXE_WIDTH, 1);
 }
 
 void deleteLineVbxe(unsigned char y, unsigned char yBottom)
 {
     if (y < yBottom) {
-        blit(0x1000 + screenX.lineTab[y] , 0x1000 + screenX.lineTab[y+1], 80, yBottom - y);
+        blit(VBXE_SCREENADDR + screenX.lineTab[y], VBXE_SCREENADDR + screenX.lineTab[y+1], VBXE_WIDTH, yBottom - y);
     }
-    blit(0x1000 + screenX.lineTab[yBottom] , 0,  80, 1);
+    blit(VBXE_SCREENADDR + screenX.lineTab[yBottom], 0, VBXE_WIDTH, 1);
 }
 
 void insertCharVbxe(unsigned char x, unsigned char y)
 {
     unsigned char *pStart;
-    if (x < 79) {
-        blit(0x1000 + screenX.lineTab[y] + x, 0x1000 + screenX.lineTab[y+1] + 1, 79-x, 1);
-    }
-    pStart = (unsigned char *) 0x4000 + screenX.lineTab[y] + (x << 1);
-    vbxe.regs->MEMAC_BANK_SEL = 0x81;
+    if (x < VBXE_WIDTH-1)
+        blit(VBXE_SCREENADDR + screenX.lineTab[y] + x, VBXE_SCREENADDR + screenX.lineTab[y+1] + 1, VBXE_WIDTH - 1 - x, 1);
+    pStart = VBXE_SCREENMEM + screenX.lineTab[y] + (x << 1);
+    vbxe.regs->MEMAC_BANK_SEL = VBXE_SCREENBANK;
     *pStart++ = 0;
     *pStart = 0;
-    vbxe.regs->MEMAC_BANK_SEL = 0x81;
+    vbxe.regs->MEMAC_BANK_SEL = 0;
 }
 
 void deleteCharVbxe(unsigned char x, unsigned char y)
 {
     unsigned char *pStart;
-    if (x < 79) {
-        blit(0x1000 + screenX.lineTab[y] + x + 1, 0x1000 + screenX.lineTab[y+1], 79-x, 1);
-    }
-    pStart = (unsigned char *) 0x4000 + screenX.lineTab[y] + (79 << 1);
-    vbxe.regs->MEMAC_BANK_SEL = 0x81;
+    if (x < VBXE_WIDTH-1)
+        blit(VBXE_SCREENADDR + screenX.lineTab[y] + x + 1, VBXE_SCREENADDR + screenX.lineTab[y+1], VBXE_WIDTH - 1 - x, 1);
+    pStart = VBXE_SCREENMEM + screenX.lineTab[y] + ((VBXE_WIDTH - 1) << 1);
+    vbxe.regs->MEMAC_BANK_SEL = VBXE_SCREENBANK;
     *pStart++ = 0;
     *pStart = 0;
-    vbxe.regs->MEMAC_BANK_SEL = 0x81;
+    vbxe.regs->MEMAC_BANK_SEL = 0;
 }
 
 // Try attrib 0x23 and 0xf
