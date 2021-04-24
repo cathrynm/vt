@@ -118,6 +118,8 @@ typedef struct {
 
 typedef struct {
     unsigned char sdmctl;
+    unsigned char MEMAC_CONTROL;
+    unsigned char MEMAC_BANK_SEL;
     VBXE_REGS *regs;
 } vbxeStruct;
 
@@ -139,24 +141,27 @@ unsigned char testForVbxe(void) {
 
 unsigned char vbxeTest(void)
 {
+    unsigned char y;
+    static VBXE_REGS *baseAddr[2] = {(VBXE_REGS *) 0xd640, (VBXE_REGS *) 0xd740};
     vbxe.sdmctl = OS.sdmctl;
-    vbxe.regs = (VBXE_REGS *) 0xd640;
-    if (testForVbxe()) {
-        restoreVbxe();
-        return 1;
-    }
-    vbxe.regs = (VBXE_REGS *) 0xd740;
-    if (testForVbxe()) {
-        restoreVbxe();
-        return 1;
+    for (y = 0;y<2;y++) {
+        vbxe.regs = baseAddr[y];
+        if (testForVbxe()) {
+            vbxe.MEMAC_CONTROL = vbxe.regs->MEMAC_CONTROL;
+            vbxe.MEMAC_BANK_SEL = vbxe.regs->MEMAC_BANK_SEL;
+            vbxe.regs->VIDEO_CONTROL = 0x05;
+            return 1;
+        }
     }
     vbxe.regs = NULL;
     return 0;
 }
 
+
 void initVbxe(void)
 {
     unsigned char y;
+    OS.appmhi = ((unsigned char *)OS.memtop) - 0x1000;
     vbxe.regs->MEMAC_CONTROL = 0x48;       // 4k banks, CPU only, $4000
     vbxe.regs->MEMAC_BANK_SEL = 0x80;      // bank zero
     // copy font to $0800 VBXE memory, bank 0
@@ -206,10 +211,21 @@ void blit(unsigned short dest, unsigned short source, unsigned char wid, unsigne
 
 void restoreVbxe(void)
 {
+    vbxe.regs->MEMAC_CONTROL = vbxe.MEMAC_CONTROL;
+    vbxe.regs->MEMAC_BANK_SEL = vbxe.MEMAC_BANK_SEL;
     if (vbxe.sdmctl) {
         vbxe.regs->VIDEO_CONTROL = 0;
         OS.sdmctl = vbxe.sdmctl;
-    } else  vbxe.regs->VIDEO_CONTROL = 0x05;
+    } else  {
+// Where S_VBXE.SYS leaves things
+// XDL base address 7e130
+// Screen is at 7ec00  // 7e
+// Character set is at 7c000-7c800 7c
+        vbxe.regs->VIDEO_CONTROL = 0x05;
+        vbxe.regs->XDL_ADR0 = 0x30; 
+        vbxe.regs->XDL_ADR1 = 0xe1;
+        vbxe.regs->XDL_ADR2 = 0x07;
+    }
 }
 
 void clearScreenVbxe(void)
