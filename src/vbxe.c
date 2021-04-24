@@ -284,7 +284,8 @@ void cursorUpdateVbxe(unsigned char x, unsigned char y)
     unsigned char *pStart = VBXE_SCREENMEM + screenX.lineTab[y] + (x << 1);
     if (vbxe.cursorOn)cursorHideVbxe();
     vbxe.regs->MEMAC_BANK_SEL = VBXE_SCREENBANK;
-    *pStart |= 0x80;
+    *pStart++ |= 0x80;
+    *pStart = 0xf;
     vbxe.regs->MEMAC_BANK_SEL = 0;
     vbxe.cursorX = x;
     vbxe.cursorY = y;
