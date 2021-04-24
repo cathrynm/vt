@@ -238,6 +238,7 @@ void initVbxe(void)
     vbxe.regs->MEMAC_CONTROL = (VBXE_BANKTOP >> 8) | 0x8 | (VBXE_BANKSHIFT - 12);       //  0x8 = CPU
     vbxe.regs->MEMAC_BANK_SEL = VBXE_XDLBANK;
     memcpy(VBXE_FONTMEM, (unsigned char*)0xE000, 1024);
+    initAscii(((unsigned short) VBXE_FONTMEM) >> 8);
     for (n = 0;n<1024;n++ ) {
         VBXE_FONTMEM[n + 1024] = VBXE_FONTMEM[n] ^ 0xff; 
     }

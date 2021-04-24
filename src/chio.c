@@ -813,7 +813,7 @@ void initAscii(unsigned char fontBase) {
 	memCopy(&top[125 * 8], rCurly, 8);
 	memCopy(&top[126 * 8], tilda, 8);
 	memCopy(&top[127 * 8], hashBox, 8);
-	OS.chbas = fontBase;
+	detect.fullChbas = fontBase;
 	detect.fullAscii = 1;
 }
 

@@ -95,7 +95,13 @@ unsigned char directDrawTest(void)
 void initDirect(void)
 {
 	unsigned char y;
+	if (detect.fullAscii)OS.chbas = detect.fullChbas;
 	for (y = 0;y< SCREENLINES;y++) {
 		screenX.lineTab[y] = (unsigned short) y * (unsigned short) direct.lineWidth;
 	}
+}
+
+void restoreDirect(void)
+{
+	if (detect.fullAscii)OS.chbas = detect.chbas;
 }

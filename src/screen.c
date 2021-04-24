@@ -89,6 +89,9 @@ void screenRestore(void)
 		case 'X':
 			restoreXep();
 			break;
+		case 'D':
+			restoreDirect();
+			break;
 		case 'V':
 			restoreVbxe();
 			break;

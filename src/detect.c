@@ -32,7 +32,7 @@ void initDetect(void)
 		detect.videoMode = 'S'; // The Spartdos 80 column mode lands here. 
 	}
 	detect.chbas = OS.chbas;
-	if (detect.videoMode == 'D') {  // Can VBXE display custom charsets?
+	if (detect.videoMode == 'D') {
 		if (((unsigned short) OS.memlo + 0x400 <= startAddress)) {
 			startAddress -= 0x400;
 			initAscii(startAddress >> 8);

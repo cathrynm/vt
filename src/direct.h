@@ -6,6 +6,7 @@ void deleteLineDirect(unsigned char topY, unsigned char bottomY);
 void insertLineDirect(unsigned char topY, unsigned char bottomY);
 unsigned char directDrawTest(void);
 void initDirect(void);
+void restoreDirect(void);
 
 extern unsigned char sAtascii[4];
 #endif
