@@ -123,6 +123,13 @@ void cursorHide(void)
 {
 	if (OS.crsinh) return;
 	OS.crsinh = 1;
+	switch(detect.videoMode) {
+		case 'V':
+			cursorHideVbxe();
+			break;
+		default:
+			break;
+	}
 }
 
 void cursorUpdate(unsigned char x, unsigned char y)
@@ -314,14 +321,14 @@ void drawDeleteLine(unsigned char y, unsigned char yBottom)
 
 void drawInsertChar(unsigned char x, unsigned char y)
 {
-	if ((x >= screenX.screenWidth) || (x >= screenX.lineLength[y]))return;
+	if (x >= screenX.lineLength[y])return;
 	flushBuffer();
 	switch(detect.videoMode) {
 		case 'X':
 			insertCharXep(x, y);
 			break;
 		case 'V':
-			insertCharVbxe(x, y);
+			insertCharVbxe(x, y, screenX.lineLength[y] - x);
 			break;
 		default:
 			OS.dspflg = 0;
@@ -335,14 +342,14 @@ void drawInsertChar(unsigned char x, unsigned char y)
 
 void drawDeleteChar(unsigned char x, unsigned char y)
 {
-	if ((x >= screenX.screenWidth) || (x >= screenX.lineLength[y]))return;
+	if (x >= screenX.lineLength[y])return;
 	flushBuffer();
 	switch(detect.videoMode) {
 		case 'X':
 			deleteCharXep(x, y);
 			break;
 		case 'V':
-			deleteCharVbxe(x, y);
+			deleteCharVbxe(x, y, screenX.lineLength[y] - x);
 			break;
 		default:
 			OS.dspflg = 0;
