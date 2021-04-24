@@ -67,10 +67,10 @@ void __fastcall__ setXEPLastChar(unsigned char c)
 { // 80 = cr
 	OS.dspflg = 1;
 	OS.rowcrs = XEPLINES-1;
-	OS.colcrs = XEPRMARGIN+1;
+	OS.colcrs = XEPRMARGIN - 1;
 	xepCursorShadow();
 	callEColonPutByte(c);
-	OS.colcrs++; 
+	OS.colcrs = (c == CH_EOL)? OS.lmargn : XEPRMARGIN;
 	xep.currentXepX = OS.colcrs;
 }
 
@@ -160,8 +160,8 @@ void clearScreenXep(void)
 void deleteCharXep(unsigned char x, unsigned char y)
 {
 	cursorHide();
+	drawXEPCharAt(CH_EOL, XEPRMARGIN, y); // For unknown reasons, this fails when order is reversed.
 	drawXEPCharAt(' ', XEPRMARGIN-1, y);
-	drawXEPCharAt(CH_EOL, XEPRMARGIN, y);
 	OS.dspflg = 0;
 	OS.rowcrs = y;
 	OS.colcrs = OS.lmargn + x;
@@ -174,7 +174,6 @@ void insertCharXep(unsigned char x, unsigned char y)
 {
 	cursorHide();
 	drawXEPCharAt(CH_EOL, XEPRMARGIN-1, y);
-	drawXEPCharAt(CH_EOL, XEPRMARGIN, y);
 	OS.dspflg = 0;
 	OS.rowcrs = y;
 	OS.colcrs = OS.lmargn + x;
