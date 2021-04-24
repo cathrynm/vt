@@ -24,12 +24,13 @@ void initDetect(void)
 		detect.videoMode = 'D';
 	} else if (XEP80Test()) {
 		detect.videoMode = 'X';
+	} else if (vbxeTest()) {
+		detect.videoMode = 'V';
 	} else if (logMapTrickTest()) {
 		detect.videoMode = 'A'; // This is normal Atari mode, but not direct drawing.  I think everything that does this passes directDrawTest, but maybe someday...
 	} else {
 		detect.videoMode = 'S'; // The Spartdos 80 column mode lands here. 
 	}
-	OS.stack[0] = detect.videoMode;
 	detect.chbas = OS.chbas;
 	if (detect.videoMode == 'D') {  // Can VBXE display custom charsets?
 		if (((unsigned short) OS.memlo + 0x400 <= startAddress)) {

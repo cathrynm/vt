@@ -67,11 +67,17 @@ void initScreen(void)
 		screen.eColonSpecial =  (void (*)(void)) ( (unsigned short) devhdl->special + 1);
 		break;
 	}
-	if (detect.videoMode == 'X') {
-		initXep();
-	}
-	if (detect.videoMode == 'D') {
-		initDirect();
+	switch(detect.videoMode) {
+		case 'X':
+			initXep();
+			break;
+		case 'D':
+			initDirect();
+			break;
+		case 'V':
+			initVbxe();
+			break;
+		default:break;
 	}
 	drawClearScreen();
 }
@@ -79,10 +85,15 @@ void initScreen(void)
 void screenRestore(void)
 {
 	flushBuffer();
-	if (detect.videoMode == 'X') {
-		restoreXep();
+	switch(detect.videoMode) {
+		case 'X':
+			restoreXep();
+			break;
+		case 'V':
+			restoreVbxe();
+			break;
+		default:break;
 	}
-
 	OS.dspflg = 0;
 	callEColonPutByte(clearScreenChar);
 }
@@ -92,11 +103,18 @@ void drawClearScreen(void)
 	unsigned char y;
 	cursorHide();
 	flushBuffer();
-	if (detect.videoMode == 'X') {
-		clearScreenXep();
-	} else {
-		OS.dspflg = 0;
-		callEColonPutByte(clearScreenChar);
+
+	switch(detect.videoMode) {
+		case 'X':
+			clearScreenXep();
+			break;
+		case 'V':
+			clearScreenVbxe();
+			break;
+		default:
+			OS.dspflg = 0;
+			callEColonPutByte(clearScreenChar);
+			break;
 	}
 	for (y = 0;y< 24;y++) screenX.lineLength[y] = 0;
 }
@@ -116,17 +134,23 @@ void cursorUpdate(unsigned char x, unsigned char y)
 	}
 	flushBuffer();
 	if ((OS.crsinh == 0) && (OS.colcrs == x + OS.lmargn) && (OS.rowcrs == y))return;
-	if (detect.videoMode == 'X') {
-		cursorUpdateXep(x, y);
-		return;
+	switch(detect.videoMode) {
+		case 'X':
+			cursorUpdateXep(x, y);
+			break;
+		case 'V':
+			cursorUpdateVbxe(x, y);
+			break;
+		default:
+			OS.crsinh = 0;
+			OS.colcrs = x + OS.lmargn;
+			if (OS.colcrs < OS.rmargn)OS.colcrs++;
+			else OS.colcrs = OS.lmargn;
+			OS.rowcrs = y;
+			OS.dspflg = 0;
+			callEColonPutByte( CH_CURS_LEFT);
+			break;
 	}
-	OS.crsinh = 0;
-	OS.colcrs = x + OS.lmargn;
-	if (OS.colcrs < OS.rmargn)OS.colcrs++;
-	else OS.colcrs = OS.lmargn;
-	OS.rowcrs = y;
-	OS.dspflg = 0;
-	callEColonPutByte( CH_CURS_LEFT);
 }
 
 
@@ -135,49 +159,51 @@ void drawCharsAt(unsigned char *buffer, unsigned char bufferLen, unsigned char x
 	unsigned char logMapTouch = 0, xp;
 	if ((x >= screenX.screenWidth) || !bufferLen)return;
 	if (x + bufferLen > screenX.screenWidth)bufferLen = screenX.screenWidth - x;
-	if (detect.videoMode == 'D') {
-		writeScreen(buffer, bufferLen, x, y);
-		return;
-	}
 	OS.dspflg = 1;
 	OS.rowcrs = y;
 	OS.colcrs = x;
-	if (detect.videoMode == 'X') {
-		drawCharsAtXep(buffer, bufferLen);
-		return;
-	}
-	if (x + bufferLen < screenX.screenWidth) {
-		callEColonPutBytes(buffer, bufferLen);
-		return;
-	}
-	if ((detect.videoMode == 'A') && (y < SCREENLINES-1)) {
-		logMapTouch = y + 1;
-		OS.logmap[logMapTouch >> 3] &= ~(1 << (7-( logMapTouch & 7))); // Fake out OS, tell it next line is continuation, just for this. 
-		callEColonPutBytes(buffer, bufferLen);
-		OS.logmap[logMapTouch >>3] = 0xff;
-	} else {
-		if (bufferLen > 2) {
-			callEColonPutBytes(buffer, bufferLen - 2);
-		}
-		if (bufferLen >= 2) { // Goofy way to draw in last column, but maybe works?
-			xp = x + bufferLen - 2;
-			cursorHide();
-			OS.colcrs = xp;
-			OS.dspflg = 0;
-			callEColonPutByte(CH_DELCHR);
-			OS.colcrs = xp;
-			OS.dspflg = 1;
-			callEColonPutByte(buffer[bufferLen-1]);
-			OS.colcrs = xp;
-			OS.dspflg = 0;
-			callEColonPutByte(CH_INSCHR);
-			OS.colcrs = x + bufferLen - 2;
-			OS.dspflg = 1;
-			callEColonPutByte(buffer[bufferLen-2]);
-		} else {
-			// I have one character to draw on the right edge, and Atari makes this so hard.
-		}
-
+	switch(detect.videoMode) {
+		case 'D':
+			writeScreen(buffer, bufferLen, x, y);
+			break;
+		case 'X':
+			drawCharsAtXep(buffer, bufferLen);
+			break;
+		case 'V':
+			drawCharsAtVbxe(buffer, bufferLen);
+			break;
+		default:
+			if (x + bufferLen < screenX.screenWidth) {
+				callEColonPutBytes(buffer, bufferLen);
+			} else if ((detect.videoMode == 'A') && (y < SCREENLINES-1)) {
+				logMapTouch = y + 1;
+				OS.logmap[logMapTouch >> 3] &= ~(1 << (7-( logMapTouch & 7))); // Fake out OS, tell it next line is continuation, just for this. 
+				callEColonPutBytes(buffer, bufferLen);
+				OS.logmap[logMapTouch >>3] = 0xff;
+			} else {
+				if (bufferLen > 2) {
+					callEColonPutBytes(buffer, bufferLen - 2);
+				}
+				if (bufferLen >= 2) { // Goofy way to draw in last column, but maybe works?
+					xp = x + bufferLen - 2;
+					cursorHide();
+					OS.colcrs = xp;
+					OS.dspflg = 0;
+					callEColonPutByte(CH_DELCHR);
+					OS.colcrs = xp;
+					OS.dspflg = 1;
+					callEColonPutByte(buffer[bufferLen-1]);
+					OS.colcrs = xp;
+					OS.dspflg = 0;
+					callEColonPutByte(CH_INSCHR);
+					OS.colcrs = x + bufferLen - 2;
+					OS.dspflg = 1;
+					callEColonPutByte(buffer[bufferLen-2]);
+				} else {
+					// I have one character to draw on the right edge, and Atari makes this so hard.
+				}
+			}
+			break;
 	}
 }
 
@@ -187,7 +213,6 @@ void flushBuffer(void)
 	if (!screen.bufferLen)return;
 	cursorHide();
 	drawCharsAt(screen.buffer, screen.bufferLen, OS.lmargn + screen.bufferX - screen.bufferLen, screen.bufferY);
-
 	screen.bufferLen = 0;
 }
 
@@ -231,23 +256,28 @@ void drawClearLine(unsigned char y)
 void drawInsertLine(unsigned char y, unsigned char yBottom)
 {
 	unsigned char yp;
-	if (detect.videoMode == 'X') {
-		insertLineXep(y, yBottom);
-		return;
-	}
 	flushBuffer();
-	if (detect.videoMode == 'D') {
-		directScrollDown(y, yBottom);
-	} else {
-		OS.dspflg = 0;
-		OS.colcrs = OS.lmargn;
-		if (yBottom < SCREENLINES -1) {
-			cursorHide();
-			OS.rowcrs = yBottom;
-			callEColonPutByte(CH_DELLINE);
-		}
-		OS.rowcrs = y;
-		callEColonPutByte(CH_INSLINE);
+	switch(detect.videoMode) {
+		case 'X':
+			insertLineXep(y, yBottom);
+			break;
+		case 'D':
+			directScrollDown(y, yBottom);
+			break;
+		case 'V':
+			insertLineVbxe(y, yBottom);
+			break;
+		default:
+			OS.dspflg = 0;
+			OS.colcrs = OS.lmargn;
+			if (yBottom < SCREENLINES -1) {
+				cursorHide();
+				OS.rowcrs = yBottom;
+				callEColonPutByte(CH_DELLINE);
+			}
+			OS.rowcrs = y;
+			callEColonPutByte(CH_INSLINE);
+			break;
 	}
 	for (yp = yBottom;yp > y;yp--) screenX.lineLength[yp] = screenX.lineLength[yp-1];
 	screenX.lineLength[y] = 0;
@@ -256,23 +286,28 @@ void drawInsertLine(unsigned char y, unsigned char yBottom)
 void drawDeleteLine(unsigned char y, unsigned char yBottom)
 {
 	unsigned char yp;
-	if (detect.videoMode == 'X') {
-		deleteLineXep(y, yBottom);
-		return;
-	}
 	flushBuffer();
-	if (detect.videoMode == 'D') {
-		directScrollUp(y, yBottom);
-	} else {
-		OS.dspflg = 0;
-		OS.rowcrs = y;
-		OS.colcrs = OS.lmargn;
-		callEColonPutByte(CH_DELLINE);
-		if (yBottom < SCREENLINES - 1) { // Probably will blink but have no choice.
-			cursorHide();
-			OS.rowcrs = yBottom;
-			callEColonPutByte(CH_INSLINE);
-		}
+	switch (detect.videoMode) {
+		case 'X':
+			deleteLineXep(y, yBottom);
+			break;
+		case 'D':
+			directScrollUp(y, yBottom);
+			break;
+		case 'V':
+			deleteLineVbxe(y, yBottom);
+			break;
+		default:
+			OS.dspflg = 0;
+			OS.rowcrs = y;
+			OS.colcrs = OS.lmargn;
+			callEColonPutByte(CH_DELLINE);
+			if (yBottom < SCREENLINES - 1) { // Probably will blink but have no choice.
+				cursorHide();
+				OS.rowcrs = yBottom;
+				callEColonPutByte(CH_INSLINE);
+			}
+			break;
 	}
 	for (yp = y;yp+1 <= yBottom;yp++) screenX.lineLength[yp] = screenX.lineLength[yp+1];
 	screenX.lineLength[yBottom] = 0;
@@ -282,30 +317,41 @@ void drawInsertChar(unsigned char x, unsigned char y)
 {
 	if ((x >= screenX.screenWidth) || (x >= screenX.lineLength[y]))return;
 	flushBuffer();
-	if (detect.videoMode == 'X') {
-		insertCharXep(x, y);
-		return;
+	switch(detect.videoMode) {
+		case 'X':
+			insertCharXep(x, y);
+			break;
+		case 'V':
+			insertCharVbxe(x, y);
+			break;
+		default:
+			OS.dspflg = 0;
+			OS.rowcrs = y;
+			OS.colcrs = OS.lmargn + x;;
+			callEColonPutByte(CH_INSCHR);
+			break;
 	}
 	screenX.lineLength[y]++;
-	OS.dspflg = 0;
-	OS.rowcrs = y;
-	OS.colcrs = OS.lmargn + x;;
-	callEColonPutByte(CH_INSCHR);
 }
 
 void drawDeleteChar(unsigned char x, unsigned char y)
 {
-	static unsigned char ch = CH_DELCHR;
 	if ((x >= screenX.screenWidth) || (x >= screenX.lineLength[y]))return;
 	flushBuffer();
-	if (detect.videoMode == 'X') {
-		deleteCharXep(x, y);
-		return;
+	switch(detect.videoMode) {
+		case 'X':
+			deleteCharXep(x, y);
+			break;
+		case 'V':
+			deleteCharVbxe(x, y);
+			break;
+		default:
+			OS.dspflg = 0;
+			OS.rowcrs = y;
+			OS.colcrs = OS.lmargn + x;
+			callEColonPutByte(CH_DELCHR);
+			break;
 	}
-	OS.dspflg = 0;
-	OS.rowcrs = y;
-	OS.colcrs = OS.lmargn + x;
-	callEColonPutByte(ch);
 	screenX.lineLength[y]--;
 }
 
