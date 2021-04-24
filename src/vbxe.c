@@ -9,30 +9,27 @@
 #define VBXE_BANKMASK (VBXE_BANKSIZE-1) // 0xfff
 
 #define VBXE_XDLADDR 0x0000
-#define VBXE_XDLBANK ((VBXE_XDLADDR >> VBXE_BANKSHIFT) | 0x80)
+#define VBXE_XDLXBANK 0
+#define VBXE_XDLBANK ((VBXE_XDLXBANK << (16 - VBXE_BANKSHIFT)) | (VBXE_XDLADDR >> VBXE_BANKSHIFT) | 0x80)
 #define VBXE_XDLMEM ((unsigned char *)(VBXE_BANKTOP + (VBXE_XDLADDR & VBXE_BANKMASK)))
 
 #define VBXE_BLITADDR 0x0100 // address in VBXE memory of blitter data
-#define VBXE_BLITBANK ((VBXE_BLITADDR >> VBXE_BANKSHIFT) | 0x80) // Bank of VBXE blitter
+#define VBXE_BLITXBANK 0
+#define VBXE_BLITBANK ((VBXE_BLITXBANK << (16 - VBXE_BANKSHIFT)) | (VBXE_BLITADDR >> VBXE_BANKSHIFT) | 0x80) // Bank of VBXE blitter
 #define VBXE_BLITMEM ((blitterStruct *)(VBXE_BANKTOP + (VBXE_BLITADDR & VBXE_BANKMASK))) // 6502 address of blitter memory
 
 #define VBXE_FONTADDR 0x0800
-#define VBXE_FONTBANK ((VBXE_FONTADDR >> VBXE_BANKSHIFT) | 0x80)
+#define VBXE_FONTXBANK 0
+#define VBXE_FONTBANK ((VBXE_FONTXBANK << (16 - VBXE_BANKSHIFT)) | (VBXE_FONTADDR >> VBXE_BANKSHIFT) | 0x80)
 #define VBXE_FONTMEM ((unsigned char *)(VBXE_BANKTOP + (VBXE_FONTADDR & VBXE_BANKMASK)))
 
 #define VBXE_SCREENADDR 0x1000 // address in VBXE memory of screen
-#define VBXE_SCREENBANK ((VBXE_SCREENADDR >> VBXE_BANKSHIFT) | 0x80) // Bank of VBXE Screen memory
+#define VBXE_SCREENXBANK 0
+#define VBXE_SCREENBANK ((VBXE_SCREENXBANK << (16 - VBXE_BANKSHIFT)) | (VBXE_SCREENADDR >> VBXE_BANKSHIFT) | 0x80) // Bank of VBXE Screen memory
 #define VBXE_SCREENMEM ((unsigned char *)(VBXE_BANKTOP + (VBXE_SCREENADDR & VBXE_BANKMASK))) // 6502 address of Screen
 
 
-// Order of XDL data (if required)
-// XDLC_RPTL    (1 byte)
-// XDLC_OVADR   (5 bytes)
-// XDLC_OVSCRL  (2 bytes)
-// XDLC_CHBASE  (1 byte)
-// XDLC_MAPADR  (5 bytes)
-// XDLC_MAPPAR  (4 bytes)
-// XDLC_OVATT   (2 bytes)
+
 
 #define XDLC_TMON       0x0001
 #define XDLC_GMON       0x0002
@@ -79,10 +76,15 @@ typedef struct {
     };
     unsigned char _unused0[5];
     union {
-        unsigned char BL_ADR0;
-        unsigned char BLT_COLLISION_CODE;
+        struct {
+            union {
+                unsigned char BL_ADR0;
+                unsigned char BLT_COLLISION_CODE;
+            };
+            unsigned char BL_ADR1;
+        };
+        unsigned short BL_ADR;
     };
-    unsigned char BL_ADR1;
     unsigned char BL_ADR2;
     union {
         unsigned char BLITTER_START;
@@ -152,7 +154,14 @@ typedef struct {
 vbxeStruct vbxe;
 
 #define XDLC    (XDLC_TMON+XDLC_RPTL+XDLC_OVADR+XDLC_CHBASE+XDLC_OVATT+XDLC_END)
-
+// Order of XDL data (if required)
+// XDLC_RPTL    (1 byte)
+// XDLC_OVADR   (5 bytes)
+// XDLC_OVSCRL  (2 bytes)
+// XDLC_CHBASE  (1 byte)
+// XDLC_MAPADR  (5 bytes)
+// XDLC_MAPPAR  (4 bytes)
+// XDLC_OVATT   (2 bytes)
 static unsigned char xdl[] = { (XDLC % 256), (XDLC / 256), 
 	       215, 0x20, 0x0E, 0x00, 160, 0, 1, 1, 255 };
 
@@ -201,9 +210,8 @@ void initBlit(void)
     blitter->blt_xor_mask = 0;
     blitter->blt_control = 0; // Next = 0 Mode = 0 (Copy)
     blitter->blt_zoom = 0;
-    vbxe.regs->BL_ADR0 = 0;
-    vbxe.regs->BL_ADR1 = 0x1;
-    vbxe.regs->BL_ADR2 = 0;
+    vbxe.regs->BL_ADR = VBXE_BLITADDR;
+    vbxe.regs->BL_ADR2 = VBXE_BLITXBANK;
 }
 
 void blit(unsigned short dest, unsigned short source, unsigned char wid, unsigned char hi)
@@ -225,12 +233,12 @@ void blit(unsigned short dest, unsigned short source, unsigned char wid, unsigne
 void initVbxe(void)
 {
     unsigned char y;
-    vbxe.regs->MEMAC_CONTROL = (VBXE_BANKTOP >> 8) | 0x8;       // 4k banks, CPU only, $4000
+    vbxe.regs->MEMAC_CONTROL = (VBXE_BANKTOP >> 8) | 0x8 | (VBXE_BANKSHIFT - 12);       //  0x8 = CPU
     vbxe.regs->MEMAC_BANK_SEL = VBXE_XDLBANK;
-    memcpy(VBXE_FONTMEM, (unsigned char*)0xE000, 1024); // 
+    memcpy(VBXE_FONTMEM, (unsigned char*)0xE000, 1024);
     memcpy(VBXE_XDLMEM, xdl, 11);
     vbxe.regs->XDL_ADR = VBXE_XDLADDR;
-    vbxe.regs->XDL_ADR2 = 0;
+    vbxe.regs->XDL_ADR2 = VBXE_XDLXBANK;
     // turn on XDL processing
     vbxe.regs->VIDEO_CONTROL = 0x01;
     initBlit();
