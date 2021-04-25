@@ -85,7 +85,7 @@ void initScreen(void)
 			break;
 		default:break;
 	}
-	drawClearScreen();
+	drawClearScreen(0);
 }
 
 void screenRestore(void)
@@ -107,7 +107,7 @@ void screenRestore(void)
 	callEColonPutByte(clearScreenChar);
 }
 
-void drawClearScreen(void)
+void drawClearScreen(unsigned char color)
 {
 	unsigned char y;
 	cursorHide();
@@ -117,9 +117,10 @@ void drawClearScreen(void)
 		case 'X':
 			clearScreenXep();
 			break;
-		case 'V':
-			clearScreenVbxe();
+		case 'V': {
+			clearScreenVbxe(color);
 			break;
+		}
 		default:
 			OS.dspflg = 0;
 			callEColonPutByte(clearScreenChar);
@@ -252,10 +253,21 @@ void drawCharAt(unsigned char c, unsigned char attribute, unsigned char color, u
 		screenX.lineLength[screen.bufferY] = screen.bufferX;
 }
 
-void drawClearCharsAt(unsigned char len, unsigned char x, unsigned char y)
+void drawColorClearCharsAt(unsigned char len, unsigned char x, unsigned char y, unsigned char color) {
+	for (;len--;)drawCharAt(' ', 0, color, x++, y);
+}
+
+void drawClearCharsAt(unsigned char len, unsigned char x, unsigned char y, unsigned char color)
 {
 	unsigned char oldLen;
-	if ((y >= SCREENLINES) || (x >= screenX.screenWidth) || (x >= screenX.lineLength[y]))return;
+	if ((y >= SCREENLINES) || (x >= screenX.screenWidth))return;
+	if (!detect.hasColor)color = 0;
+
+	if (color) {
+		drawColorClearCharsAt(len, x, y, color);
+		return;
+	}
+	if (x >= screenX.lineLength[y])return;
 	cursorHide();
 	flushBuffer();
 	oldLen = screenX.lineLength[y];
@@ -267,14 +279,12 @@ void drawClearCharsAt(unsigned char len, unsigned char x, unsigned char y)
 	drawCharsAt(screen.clearBuffer, len, x + OS.lmargn, y);
 }
 
-void drawClearLine(unsigned char y)
+void drawClearLine(unsigned char y, unsigned char color)
 {
-	drawClearCharsAt(screenX.screenWidth - OS.lmargn, 0, y);
+	drawClearCharsAt(screenX.screenWidth - OS.lmargn, 0, y, color);
 }
 
-
-
-void drawInsertLine(unsigned char y, unsigned char yBottom)
+void drawInsertLine(unsigned char y, unsigned char yBottom, unsigned char color)
 {
 	unsigned char yp;
 	flushBuffer();
@@ -286,7 +296,7 @@ void drawInsertLine(unsigned char y, unsigned char yBottom)
 			insertLineDirect(y, yBottom);
 			break;
 		case 'V':
-			insertLineVbxe(y, yBottom);
+			insertLineVbxe(y, yBottom, color);
 			break;
 		default:
 			OS.dspflg = 0;
@@ -304,7 +314,7 @@ void drawInsertLine(unsigned char y, unsigned char yBottom)
 	screenX.lineLength[y] = 0;
 }
 
-void drawDeleteLine(unsigned char y, unsigned char yBottom)
+void drawDeleteLine(unsigned char y, unsigned char yBottom, unsigned char color)
 {
 	unsigned char yp;
 	flushBuffer();
@@ -316,7 +326,7 @@ void drawDeleteLine(unsigned char y, unsigned char yBottom)
 			deleteLineDirect(y, yBottom);
 			break;
 		case 'V':
-			deleteLineVbxe(y, yBottom);
+			deleteLineVbxe(y, yBottom, color);
 			break;
 		default:
 			OS.dspflg = 0;
@@ -334,7 +344,7 @@ void drawDeleteLine(unsigned char y, unsigned char yBottom)
 	screenX.lineLength[yBottom] = 0;
 }
 
-void drawInsertChar(unsigned char x, unsigned char y)
+void drawInsertChar(unsigned char x, unsigned char y, unsigned char color)
 {
 	if (x >= screenX.lineLength[y])return;
 	flushBuffer();
@@ -343,7 +353,7 @@ void drawInsertChar(unsigned char x, unsigned char y)
 			insertCharXep(x, y);
 			break;
 		case 'V':
-			insertCharVbxe(x, y, screenX.lineLength[y] - x);
+			insertCharVbxe(x, y, screenX.lineLength[y] - x, color);
 			break;
 		default:
 			OS.dspflg = 0;
@@ -355,7 +365,7 @@ void drawInsertChar(unsigned char x, unsigned char y)
 	screenX.lineLength[y]++;
 }
 
-void drawDeleteChar(unsigned char x, unsigned char y)
+void drawDeleteChar(unsigned char x, unsigned char y, unsigned char color)
 {
 	if (x >= screenX.lineLength[y])return;
 	flushBuffer();
@@ -364,7 +374,7 @@ void drawDeleteChar(unsigned char x, unsigned char y)
 			deleteCharXep(x, y);
 			break;
 		case 'V':
-			deleteCharVbxe(x, y, screenX.lineLength[y] - x);
+			deleteCharVbxe(x, y, screenX.lineLength[y] - x, color);
 			break;
 		default:
 			OS.dspflg = 0;

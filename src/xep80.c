@@ -128,7 +128,7 @@ unsigned char setXepCharSet(unsigned char which)
 void deleteLineXep(unsigned char y, unsigned char yBottom)
 {
 	unsigned char saveLine, yp;
-	drawClearLine(y);
+	drawClearLine(y, 0);
 	flushBuffer();
 	saveLine = xep.xepLines[y];
 	for (yp = y;yp +1 <= yBottom;yp++) {
@@ -140,7 +140,7 @@ void deleteLineXep(unsigned char y, unsigned char yBottom)
 void insertLineXep(unsigned char y, unsigned char yBottom)
 {
 	unsigned char yp, saveLine;
-	drawClearLine(yBottom);
+	drawClearLine(yBottom, 0);
 	flushBuffer();
 	saveLine = xep.xepLines[yBottom];
 	for (yp = yBottom;yp > y;yp--) {

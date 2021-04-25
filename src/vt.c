@@ -182,14 +182,14 @@ void fixCursor(void)
 void scrollDown(unsigned char lines)
 {
 	for(;lines--;) {
-		drawInsertLine(vt.tMargin, vt.bMargin);
+		drawInsertLine(vt.tMargin, vt.bMargin, vt.color & 0x70);
 	}
 }
 
 void scrollUp(unsigned char lines)
 {
 	for(;lines--;) {
-		drawDeleteLine(vt.tMargin, vt.bMargin);
+		drawDeleteLine(vt.tMargin, vt.bMargin, vt.color & 0x70);
 	}
 }
 
@@ -294,7 +294,8 @@ void eraseCharacters(unsigned char num)
 {
 	vt.lastColumn = 0;
 	if (!num)num++;
-	if (vt.x <= vt.rMargin)	drawClearCharsAt(num <= (vt.rMargin + 1 - vt.x)? num : vt.rMargin + 1 - vt.x , vt.x, vt.y);
+	if (vt.x <= vt.rMargin)
+		drawClearCharsAt(num <= (vt.rMargin + 1 - vt.x)? num : vt.rMargin + 1 - vt.x , vt.x, vt.y, vt.color & 0x70);
 }
 
 void clearScreen(unsigned char which)
@@ -303,15 +304,15 @@ void clearScreen(unsigned char which)
 	vt.lastColumn = 0;
 	switch(which) {
 		case 0:
-			if (vt.x <= vt.rMargin)	drawClearCharsAt( vt.rMargin + 1 - vt.x, vt.x, vt.y);
-			for (y = vt.y+1;y<VTSCREENLINES;y++) drawClearLine(y);
+			if (vt.x <= vt.rMargin)	drawClearCharsAt( vt.rMargin + 1 - vt.x, vt.x, vt.y, vt.color & 0x70);
+			for (y = vt.y+1;y<VTSCREENLINES;y++) drawClearLine(y, vt.color & 0x70);
 			break;
 		case 1:
-			for (y = 0;y< vt.y;y++) drawClearLine(y);
-			drawClearCharsAt( vt.x + 1, 0, vt.y);
+			for (y = 0;y< vt.y;y++) drawClearLine(y, vt.color & 0x70);
+			drawClearCharsAt( vt.x + 1, 0, vt.y, vt.color & 0x70);
 			break;
 		case 2:
-			drawClearScreen();
+			drawClearScreen(vt.color & 0x70);
 			break;
 	}
 }
@@ -321,13 +322,13 @@ void clearLine(unsigned char which)
 	vt.lastColumn = 0;
 	switch(which) {
 		case 0:
-			if (vt.x <= vt.rMargin)	drawClearCharsAt( vt.rMargin + 1 - vt.x, vt.x, vt.y);
+			if (vt.x <= vt.rMargin)	drawClearCharsAt( vt.rMargin + 1 - vt.x, vt.x, vt.y, vt.color & 0x70);
 			break;
 		case 1:
-			drawClearCharsAt( vt.x + 1, 0, vt.y);
+			drawClearCharsAt( vt.x + 1, 0, vt.y, vt.color & 0x70);
 			break;
 		case 2:
-			drawClearLine(vt.y);
+			drawClearLine(vt.y, vt.color & 0x70);
 			break;
 	}
 }
@@ -335,20 +336,20 @@ void clearLine(unsigned char which)
 void insertLines(unsigned char num)
 {
 	if (!num)num++;
-	for (;num--;)drawInsertLine(vt.y, vt.bMargin);
+	for (;num--;)drawInsertLine(vt.y, vt.bMargin, vt.color & 0x70);
 }
 
 void deleteLines(unsigned char num)
 {
 	if (!num)num++;
-	for (;num--;)drawDeleteLine(vt.y, vt.bMargin);
+	for (;num--;)drawDeleteLine(vt.y, vt.bMargin, vt.color & 0x70);
 }
 
 void deleteCharacters(unsigned char num)
 {
 	vt.lastColumn = 0;
 	if (!num)num++;
-	for (;num--;)drawDeleteChar(vt.x, vt.y);
+	for (;num--;)drawDeleteChar(vt.x, vt.y, vt.color & 0x70);
 }
 
 unsigned char charToA(unsigned char v, unsigned char *s, unsigned char m)
@@ -598,12 +599,12 @@ void insertCharacters(unsigned char num)
 {
 	vt.lastColumn = 0;
 	if (!num)num++;
-	for(;num--;)drawInsertChar(vt.x, vt.y);
+	for(;num--;)drawInsertChar(vt.x, vt.y, vt.color & 0x70);
 }
 
 void addChar(unsigned char c, unsigned char attrib, unsigned char attrib1, unsigned char color)
 {
-	if (vt.mode[MODE_IRM]) drawInsertChar(vt.x, vt.y);
+	if (vt.mode[MODE_IRM]) drawInsertChar(vt.x, vt.y, color & 0x70);
 	if ((vt.x == vt.rMargin) && vt.lastColumn) {
 		if (vt.modeP[MODEP_DECAWM]) {
 			vt.lastColumn = 0;
@@ -1094,4 +1095,9 @@ void sendResponse(unsigned char *s, unsigned char len, unsigned char *err)
 	if (!vt.mode[MODE_SRM])
 		processChars(s, len, err);
 	sendIoResponse(s, len, err);
+}
+
+unsigned char currentColor(void)
+{
+	return vt.color;
 }
