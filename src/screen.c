@@ -83,7 +83,9 @@ void initScreen(void)
 		case 'V':
 			initVbxe();
 			break;
-		default:break;
+		default: {
+			break;
+		}
 	}
 	drawClearScreen(0);
 }

@@ -19,7 +19,8 @@ void initDetect(void)
 {
 	unsigned short startAddress = (unsigned short)_STARTADDRESS__; // Start the program on 0x400 boundary.  So 0x400 below is good
 	detect.osType = get_ostype() & AT_OS_TYPE_MAIN;
-	detect.fullAscii = 0; // Set for whether {}~ chars are available.
+	detect.chbas = OS.chbas;
+	detect.fullChbas = 0;
 	detect.hasColor  = 0;
 	if (directDrawTest()) {
 		detect.videoMode = 'D';
@@ -33,18 +34,24 @@ void initDetect(void)
 	} else {
 		detect.videoMode = 'S'; // The Spartdos 80 column mode lands here. 
 	}
-	detect.chbas = OS.chbas;
 	if (detect.videoMode == 'D') {
-		if (((unsigned short) OS.memlo + 0x400 <= startAddress)) {
+		startAddress &= ~0x3ff;
+		if (((unsigned short) OS.memlo + 0x400 <= startAddress)  && !(startAddress & 0x3ff)) {
 			startAddress -= 0x400;
-			initAscii(startAddress >> 8);
+			detect.fullChbas = startAddress >> 8;
 		}
 	}
+	OS.stack[4] = detect.videoMode;
+	OS.stack[5] = detect.fullChbas;
+	OS.stack[6] = ((unsigned short)startAddress) & 0xff;
+	OS.stack[7] = ((unsigned short)startAddress) >> 8;
+	OS.stack[8] = ((unsigned short)OS.memlo) & 0xff;
+	OS.stack[9] = ((unsigned short)OS.memlo) >> 8;
+
 	if ((unsigned short) OS.memlo < startAddress)
 		_heapadd(OS.memlo, startAddress - (unsigned short) OS.memlo); // recover memory below font and above lomem
 }
 
 void closeDetect(void)
 {
-	OS.chbas = detect.chbas;
 }

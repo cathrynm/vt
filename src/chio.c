@@ -12,6 +12,7 @@ struct chioDataStruct {
 	void *vprced;
 	unsigned char pactl;
 	unsigned char interruptOn;
+	unsigned char fullAscii;
 };
 
 chioStruct chio;
@@ -89,7 +90,7 @@ void convertLongToVisibleChar(unsigned long c, unsigned char *ch, unsigned char 
 void convertAsciiToVisibleChar(unsigned char *ch, unsigned char *attrib)
 {
 	if ((*ch >= 32 && *ch <=95) || (*ch >= 97 && *ch <= 122) || (*ch == 124))return;
-	if (detect.fullAscii && ((*ch == 116) || (*ch == 123) || (*ch == 125) || (*ch == 126)))return;
+	if (chio.fullAscii && ((*ch == 116) || (*ch == 123) || (*ch == 125) || (*ch == 126)))return;
 	*attrib = ERRATTRIB;  // Atari are missing { } ` ~.  Show as undrawable.  127, 0-31 are undrawable anyway.
 	*ch = ERRCHAR;
 }
@@ -816,8 +817,12 @@ void initAscii(unsigned char fontBase) {
 	memCopy(&top[125 * 8], rCurly, 8);
 	memCopy(&top[126 * 8], tilda, 8);
 	memCopy(&top[127 * 8], hashBox, 8);
-	detect.fullChbas = fontBase;
-	detect.fullAscii = 1;
+	setFullAscii(1);
+}
+
+void setFullAscii(unsigned char fullAscii)
+{
+	chio.fullAscii = fullAscii;
 }
 
 unsigned char initChio(void) // Don't use malloc from here.
@@ -825,7 +830,7 @@ unsigned char initChio(void) // Don't use malloc from here.
 	unsigned char err = ERR_NONE;
 	memset((unsigned char *)&chio, 0, sizeof(chio));
 	chio.utfType  = 0;
-
+	chio.fullAscii = 0;
 	if (detect.osType >= 2) chio.keyTab = OS.keydef;
 	else  {
 		chio.keyTab = (unsigned char *)0xfefe;  // Into the OS, but I think there's
@@ -869,6 +874,8 @@ unsigned char getline(unsigned char *buf, unsigned char len, unsigned char *err)
 void enableInterrupt(void)
 {
 	if (chio.interruptOn)return;
+	chio.vprced = OS.vprced;
+	chio.pactl = PIA.pactl;
 	trip = 0;
 	PIA.pactl  &= (~1);
 	OS.vprced   = ih;            // Set PROCEED interrupt vector to our interrupt handler.
@@ -880,8 +887,8 @@ void closeInterrupt(void)
 {
 	if (chio.interruptOn) {
 		chio.interruptOn = 0;
-		chio.vprced  = OS.vprced;
-		chio.pactl = PIA.pactl;
+		PIA.pactl = chio.pactl;
+		OS.vprced = chio.vprced;
 	}
 }
 

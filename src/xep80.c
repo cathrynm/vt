@@ -120,7 +120,7 @@ unsigned char setXepCharSet(unsigned char which)
 	if (which == xep.xepCharset)return err;
 	callEColonSpecial(20, 12, which);
 	xep.xepCharset = which;
-	detect.fullAscii = (which == XEPCH_INTERN); // Internal charset has { } ~ characters
+	setFullAscii((which == XEPCH_INTERN)); // Internal charset has { } ~ characters
 	return err;
 }
 
