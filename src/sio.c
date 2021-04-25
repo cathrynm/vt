@@ -178,5 +178,6 @@ unsigned short sioStatus(unsigned char device, unsigned char *err) {
   sio();
   dcbErrUpdate(err);
   if (*err != ERR_NONE)return 0;
+  if (OS.dvstat[3]) *err = OS.dvstat[3]; // dvstat[3] is error for Fujinet and daux2 = 0
   return * (unsigned short *) &OS.dvstat[0];
 }
