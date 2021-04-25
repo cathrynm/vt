@@ -9,12 +9,14 @@ struct chioDataStruct {
 	unsigned short utfWord;
 	unsigned long utfLong; // Super slow on 6502, but these are rare, so whatever.
 	unsigned char *keyTab;
+	void *vprced;
+	unsigned char pactl;
+	unsigned char interruptOn;
 };
 
 chioStruct chio;
 unsigned char *eColon = "E:";
 unsigned char clearScreenChar = CH_CLR;
-
 
 
 void drawChar(unsigned char ch)
@@ -38,6 +40,7 @@ unsigned char isIntl(void)
 unsigned char closeChio(void)
 {
 	unsigned char err = ERR_NONE;
+	closeInterrupt();
 	OS.iocb[2].command = IOCB_CLOSE;
 	cio(2);
 	iocbErrUpdate(2, &err);
@@ -860,4 +863,37 @@ unsigned char getline(unsigned char *buf, unsigned char len, unsigned char *err)
 	iocbErrUpdate(0, err);
 	if (*err != ERR_NONE) return 0;
 	return OS.iocb[0].buflen;
+}
+
+
+void enableInterrupt(void)
+{
+	if (chio.interruptOn)return;
+	trip = 0;
+	PIA.pactl  &= (~1);
+	OS.vprced   = ih;            // Set PROCEED interrupt vector to our interrupt handler.
+	PIA.pactl  |= 1;             // Indicate to PIA we are ready for PROCEED interrupt.
+	chio.interruptOn = 1;
+}
+
+void closeInterrupt(void)
+{
+	if (chio.interruptOn) {
+		chio.interruptOn = 0;
+		chio.vprced  = OS.vprced;
+		chio.pactl = PIA.pactl;
+	}
+}
+
+unsigned char proceedReady(void)
+{
+	if (!chio.interruptOn)return 1;
+	return trip;
+}
+
+void doneProceeed(void)
+{
+	if (!chio.interruptOn)return;
+	trip = 0;
+	PIA.pactl |= 1;
 }

@@ -48,6 +48,10 @@ unsigned char getline(unsigned char *buf, unsigned char len, unsigned char *err)
 void drawString(unsigned char *s);
 void drawChar(unsigned char ch);
 void initAscii(unsigned char fontBase);
+void enableInterrupt(void);
+unsigned char proceedReady(void);
+void doneProceeed(void);
+void closeInterrupt(void);
 
 extern unsigned char *eColon;
 extern unsigned char clearScreenChar;

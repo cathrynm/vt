@@ -48,6 +48,9 @@ void ioOpen(unsigned char *deviceName, unsigned char deviceLen, openIoStruct *op
 			deviceName = processFilename(deviceName, deviceLen, &io.sioDevice, &buff, err);
 			if (*err == ERR_NONE) {
 				sioOpen(deviceName, deviceLen, io.sioDevice, IOCB_WRITEBITS|IOCB_READBITS, 0, err);
+				if (*err == ERR_NONE) {
+					enableInterrupt();
+				}
 			}
 			if (buff)free(buff);
 			break;
@@ -107,6 +110,7 @@ void ioRead(unsigned char *data, unsigned short len, unsigned char *err) {
 void readData(unsigned char *err) {
 	unsigned short n;
 	unsigned short readLen, inputReady;
+	if (!proceedReady())return;
 	for (;;) { // Just keep going until drained.
 		inputReady = ioStatus(err);
 		if (*err != ERR_NONE)break;
@@ -127,6 +131,7 @@ void readData(unsigned char *err) {
 		if (*err != ERR_NONE)break;
 		if (anyKey())break;
 	}
+	doneProceeed();
 }
 
 void ioClose(unsigned char *err)
@@ -137,6 +142,7 @@ void ioClose(unsigned char *err)
 			break;
 		case 'N':
 			sioClose(io.sioDevice, err);
+			closeInterrupt();
 			break;
 		default:
 			errUpdate(ERR_DEVICENOTEXIST, err);

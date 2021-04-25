@@ -16,6 +16,7 @@
 #include "sio.h"
 #include "io.h"
 #include "detect.h"
+#include "asm.h"
 
 #define cio(iocb)			\
 	(__AX__ = (iocb),		\
