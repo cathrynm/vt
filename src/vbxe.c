@@ -29,10 +29,6 @@
 #define VBXE_SCREENMEM ((unsigned char *)(VBXE_BANKTOP + (VBXE_SCREENADDR & VBXE_BANKMASK))) // 6502 address of Screen
 
 
-
-
-
-
 typedef struct {
     union {
         unsigned char VIDEO_CONTROL;
@@ -244,6 +240,24 @@ void blit(unsigned short dest, unsigned short source, unsigned char wid, unsigne
     vbxe.regs->MEMAC_BANK_SEL = 0;
 }
 
+void initPalette(void)
+{
+    unsigned char colorNumber;
+    for (colorNumber = 0;colorNumber<255;colorNumber++) {
+        vbxe.regs->PSEL = 0;
+        vbxe.regs->CSEL = colorNumber;
+        if (colorNumber < 128) {
+            vbxe.regs->CR = (((colorNumber & 1)!= 0)?171:0) + (((colorNumber & 8) != 0)?84:0);
+            vbxe.regs->CG = (((colorNumber & 2)!= 0)?171:0) + (((colorNumber & 8) != 0)?84:0);
+            vbxe.regs->CB = (((colorNumber & 4)!= 0)?171:0) + (((colorNumber & 8) != 0)?84:0);
+        } else {
+            vbxe.regs->CR = (((colorNumber & 0x10)!= 0)?171:0);
+            vbxe.regs->CG = (((colorNumber & 0x20)!= 0)?171:0);
+            vbxe.regs->CB = (((colorNumber & 0x40)!= 0)?171:0);
+        }
+    }
+}
+
 void initVbxe(void)
 {
     unsigned short n;
@@ -261,6 +275,7 @@ void initVbxe(void)
     vbxe.regs->VIDEO_CONTROL = 0x01;
     initBlit();
     vbxe.regs->MEMAC_BANK_SEL = 0x0;
+    initPalette();
     for (y = 0;y < SCREENLINES;y++) {
         screenX.lineTab[y] = (unsigned short) y * VBXE_WIDTH * 2;
     }
@@ -298,7 +313,7 @@ void cursorUpdateVbxe(unsigned char x, unsigned char y)
     if (vbxe.cursorOn)cursorHideVbxe();
     vbxe.regs->MEMAC_BANK_SEL = VBXE_SCREENBANK;
     *pStart++ |= 0x80;
-    *pStart = 0xf;
+    if (!*pStart)*pStart = 0x7;
     vbxe.regs->MEMAC_BANK_SEL = 0;
     vbxe.cursorX = x;
     vbxe.cursorY = y;
@@ -325,7 +340,7 @@ void drawCharsAtVbxe(unsigned char *s, unsigned char len)
     for (p = pStart;len--;) {
         c = *s++;
         *p++ = sAtascii[(c & 0x60) >> 5] | (c & 0x9f);
-        *p++ = *s++; 
+        *p++ = 0x80 | *s++; 
     }
     vbxe.regs->MEMAC_BANK_SEL = 0x0;
 }
