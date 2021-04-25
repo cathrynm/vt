@@ -31,22 +31,7 @@
 
 
 
-#define XDLC_TMON       0x0001
-#define XDLC_GMON       0x0002
-#define XDLC_OVOFF      0x0004
-#define XDLC_MAPON      0x0008
-#define XDLC_MAPOFF     0x0010
-#define XDLC_RPTL       0x0020
-#define XDLC_OVADR      0x0040
-#define XDLC_OVSCRL     0x0080
-#define XDLC_CHBASE     0x0100
-#define XDLC_MAPADR     0x0200
-#define XDLC_MAPPAR     0x0400
-#define XDLC_OVATT      0x0800
-#define XDLC_HR         0x1000
-#define XDLC_LR         0x2000
-// 0x4000 is reserved
-#define XDLC_END        0x8000
+
 
 typedef struct {
     union {
@@ -154,17 +139,45 @@ typedef struct {
 
 vbxeStruct vbxe;
 
-#define XDLC    (XDLC_TMON+XDLC_RPTL+XDLC_OVADR+XDLC_CHBASE+XDLC_OVATT+XDLC_END)
-// Order of XDL data (if required)
+
+#define XDLC_TMON       0x0001
+#define XDLC_GMON       0x0002
+#define XDLC_OVOFF      0x0004
+#define XDLC_MAPON      0x0008
+#define XDLC_MAPOFF     0x0010
+#define XDLC_RPTL       0x0020
+#define XDLC_OVADR      0x0040
+#define XDLC_OVSCRL     0x0080
+#define XDLC_CHBASE     0x0100
+#define XDLC_MAPADR     0x0200
+#define XDLC_MAPPAR     0x0400
+#define XDLC_ATT      0x0800
+#define XDLC_HR         0x1000
+#define XDLC_LR         0x2000
+// 0x4000 is reserved
+#define XDLC_END        0x8000
+
+#define XDLCBLANK  (XDLC_RPTL)
+#define XDLC    (XDLC_TMON+XDLC_RPTL+XDLC_OVADR+XDLC_CHBASE+XDLC_ATT+XDLC_END)
+
 // XDLC_RPTL    (1 byte)
 // XDLC_OVADR   (5 bytes)
 // XDLC_OVSCRL  (2 bytes)
 // XDLC_CHBASE  (1 byte)
 // XDLC_MAPADR  (5 bytes)
 // XDLC_MAPPAR  (4 bytes)
-// XDLC_OVATT   (2 bytes)
-static unsigned char xdl[] = { (XDLC % 256), (XDLC / 256), 
-	       215, 0x20, 0x0E, 0x00, 160, 0, 1, 1, 255 };
+// XDLC_ATT   (2 bytes)
+
+static unsigned char displayList[] = { 
+    XDLCBLANK & 0xff, XDLCBLANK >> 8,
+    23,  // RPTL
+    XDLC & 0xff, XDLC >> 8, 
+    192, // RPTL
+    VBXE_SCREENADDR & 0xff, VBXE_SCREENADDR/256, VBXE_SCREENXBANK,  // OVADR
+    VBXE_WIDTH*2, 0, 
+    VBXE_FONTADDR/0x800,  // CHBASE
+    1, 255 // ATT
+};
 
 
 unsigned char testForVbxe(void) {
@@ -242,10 +255,9 @@ void initVbxe(void)
     for (n = 0;n<1024;n++ ) {
         VBXE_FONTMEM[n + 1024] = VBXE_FONTMEM[n] ^ 0xff; 
     }
-    memcpy(VBXE_XDLMEM, xdl, 11);
+    memcpy(VBXE_XDLMEM, displayList, sizeof(displayList));
     vbxe.regs->XDL_ADR = VBXE_XDLADDR;
     vbxe.regs->XDL_ADR2 = VBXE_XDLXBANK;
-    // turn on XDL processing
     vbxe.regs->VIDEO_CONTROL = 0x01;
     initBlit();
     vbxe.regs->MEMAC_BANK_SEL = 0x0;
