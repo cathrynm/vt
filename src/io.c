@@ -46,12 +46,13 @@ void ioOpen(unsigned char *deviceName, unsigned char deviceLen, openIoStruct *op
 			break;
 		case 'N':
 			deviceName = processFilename(deviceName, deviceLen, &io.sioDevice, &buff, err);
-			if (*err == ERR_NONE) {
+			if ((*err == ERR_NONE)  && openIo->user)
+				sioSpecial(openIo->user, strlen(openIo->user) + 1, io.sioDevice, SIOCOMMAND_FUJIUSER, SIO_WRITE, 0, 0, err);
+			if ((*err == ERR_NONE)  && openIo->passwd)
+				sioSpecial(openIo->passwd, strlen(openIo->passwd) + 1, io.sioDevice, SIOCOMMAND_FUJIPASSWORD, SIO_WRITE, 0, 0, err);
+			if (*err == ERR_NONE) 
 				sioOpen(deviceName, deviceLen, io.sioDevice, IOCB_WRITEBITS|IOCB_READBITS, 0, err);
-				if (*err == ERR_NONE) {
-					enableInterrupt();
-				}
-			}
+			if (*err == ERR_NONE) enableInterrupt();
 			if (buff)free(buff);
 			break;
 		default:

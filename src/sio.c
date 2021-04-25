@@ -13,8 +13,8 @@ unsigned char dcbErrUpdate(unsigned char *oldErr)
 
 void bufferFixDone(unsigned char *data, unsigned char len, unsigned short outLen, unsigned char dStats, unsigned char **buff, unsigned char err) 
 {
-  if (!(dStats & (0x80 | 0x40)))return;
-  if ((dStats & 0x40) && (err != ERR_NONE)) {
+  if (!(dStats & (SIO_WRITE | SIO_READ)))return;
+  if ((dStats & SIO_READ) && (err != ERR_NONE)) {
     if (*buff)memCopy(data, *buff, (len <= outLen)? len: outLen);
     if (outLen < len) memClear(&data[outLen], len - outLen);
   }
@@ -26,7 +26,7 @@ unsigned char *bufferFix(unsigned char *data, unsigned char len, unsigned short 
 {
   unsigned char *buffer;
   *buff = NULL;
-  if (!(dStats & (0x80 | 0x40)))return data;
+  if (!(dStats & (SIO_WRITE | SIO_READ)))return data;
   if ((outLen <= len) && ((((unsigned char) data +  outLen + (unsigned char)0xff) & 0xff) != 0xff))return data;
   *buff = malloc(outLen + 1);
   if (!(*buff)) {
@@ -35,7 +35,7 @@ unsigned char *bufferFix(unsigned char *data, unsigned char len, unsigned short 
   }
   buffer = *buff;
   if ((((unsigned char) buffer + outLen + (unsigned char)0xff) & 0xff) == 0xff) buffer++;
-  if (dStats & 0x80) {
+  if (dStats & SIO_WRITE) {
     memCopy(buffer, data, (len <= outLen)? len: outLen);
     if (outLen > len) 
       memClear(&buffer[len], outLen - len);
@@ -50,7 +50,7 @@ void extendedError(unsigned char device, unsigned char *err)
   OS.dcb.ddevic = device;
   OS.dcb.dunit = 1;
   OS.dcb.dcomnd = 'S';
-  OS.dcb.dstats = 0x40;
+  OS.dcb.dstats = SIO_READ;
   OS.dcb.dbuf = &OS.dvstat;
   OS.dcb.dtimlo = SIO_TIMEOUT;
   OS.dcb.dbyt = 4;
@@ -63,13 +63,13 @@ void extendedError(unsigned char device, unsigned char *err)
 void sioOpen(unsigned char *fName, unsigned char fLen, unsigned char device, unsigned char aux1, unsigned char aux2, unsigned char *err)
 {
   unsigned char *buff;
-  fName = bufferFix(fName, fLen, 256, 0x80, &buff, err);
+  fName = bufferFix(fName, fLen, 256, SIO_WRITE, &buff, err);
   if (*err != ERR_NONE)return;
 
   OS.dcb.ddevic = device;
   OS.dcb.dunit = 1;
   OS.dcb.dcomnd = 'O';
-  OS.dcb.dstats = 0x80;
+  OS.dcb.dstats = SIO_WRITE;
   OS.dcb.dbuf = fName;
   OS.dcb.dtimlo = SIO_TIMEOUT;
   OS.dcb.dbyt = 256;
@@ -90,7 +90,7 @@ void sioSpecial(unsigned char *fName, unsigned char fLen, unsigned char device, 
   OS.dcb.dunit = 1;
   OS.dcb.dcomnd = special;
   OS.dcb.dstats = dStats;
-  if ((dStats & (0x80 | 0x40)) != 0) {
+  if ((dStats & (SIO_WRITE | SIO_READ)) != 0) {
     OS.dcb.dbuf = fName;
     OS.dcb.dbyt = 256;
   } else {
@@ -126,13 +126,13 @@ void sioClose(unsigned char device, unsigned char *err)
 unsigned char sioRead(unsigned char *buffer, unsigned char bufLen, unsigned char device, unsigned char *err) {
   unsigned char *buff;
   unsigned char *aBuffer = NULL;
-  aBuffer = bufferFix(buffer, bufLen, bufLen, 0x40, &buff, err);
+  aBuffer = bufferFix(buffer, bufLen, bufLen, SIO_READ, &buff, err);
   if (*err != ERR_NONE)return 0;
 
   OS.dcb.ddevic = device;
   OS.dcb.dunit = 1;
   OS.dcb.dcomnd = 'R';
-  OS.dcb.dstats = 0x40;
+  OS.dcb.dstats = SIO_READ;
   OS.dcb.dbuf = aBuffer;
   OS.dcb.dtimlo = SIO_TIMEOUT;
   OS.dcb.dbyt = bufLen;
@@ -140,7 +140,7 @@ unsigned char sioRead(unsigned char *buffer, unsigned char bufLen, unsigned char
   OS.dcb.daux2 = 0;
   sio();
   dcbErrUpdate(err);
-  bufferFixDone(buffer, bufLen, bufLen, 0x40, &buff, *err);
+  bufferFixDone(buffer, bufLen, bufLen, SIO_READ, &buff, *err);
   if (*err == ERR_DEVICEDONE)extendedError(device, err);
   return (*err == ERR_NONE)?bufLen:0;
 }
@@ -152,7 +152,7 @@ unsigned char sioWrite(unsigned char *buffer, unsigned char bufLen, unsigned cha
   OS.dcb.ddevic = device;
   OS.dcb.dunit = 1;
   OS.dcb.dcomnd = 'W';
-  OS.dcb.dstats = 0x80;
+  OS.dcb.dstats = SIO_WRITE;
   OS.dcb.dbuf = buffer;
   OS.dcb.dtimlo = SIO_TIMEOUT;
   OS.dcb.dbyt = bufLen;
@@ -169,7 +169,7 @@ unsigned short sioStatus(unsigned char device, unsigned char *err) {
   OS.dcb.ddevic = device;
   OS.dcb.dunit = 1;
   OS.dcb.dcomnd = 'S';
-  OS.dcb.dstats = 0x40;
+  OS.dcb.dstats = SIO_READ;
   OS.dcb.dbuf = &OS.dvstat;
   OS.dcb.dtimlo = SIO_TIMEOUT;
   OS.dcb.dbyt = 4;
