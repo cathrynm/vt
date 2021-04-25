@@ -4,13 +4,13 @@
 
 
 
-#define SCREENCOLUMNS 255
+#define SCREENCOLUMNS 80
 
 
 typedef struct {
 	unsigned char bufferLen, bufferX, bufferY;
-	unsigned char clearBuffer[SCREENCOLUMNS];
-	unsigned char buffer[SCREENCOLUMNS];
+	unsigned char clearBuffer[SCREENCOLUMNS*2];
+	unsigned char buffer[SCREENCOLUMNS*2];
 	void (*eColonSpecial)();
 }screenStruct;
 
@@ -56,7 +56,13 @@ void initScreen(void)
 {
 	devhdl_t *devhdl;
 	unsigned char n;
-	for (n = 0;n < sizeof(screen.clearBuffer);n++)screen.clearBuffer[n] = ' ';
+	for (n = 0;n < SCREENCOLUMNS;n++) {
+		if (!detect.hasColor)screen.clearBuffer[n] = ' ';
+		else {
+			screen.clearBuffer[n<<1] = ' ';
+			screen.clearBuffer[(n<<1) + 1] = DEFAULTCOLOR;
+		}
+	}
 	screenX.screenWidth = OS.rmargn + 1; 
 	screen.bufferLen = 0;
 	screen.bufferX = 255;
@@ -225,7 +231,7 @@ void flushBuffer(void)
 	screen.bufferLen = 0;
 }
 
-void drawCharAt(unsigned char c, unsigned char attribute, unsigned char x, unsigned char y)
+void drawCharAt(unsigned char c, unsigned char attribute, unsigned char color, unsigned char x, unsigned char y)
 {
 	if ((y >= SCREENLINES) || (x >= screenX.screenWidth))return;
 	if (c == 0x9b)return;
@@ -234,7 +240,13 @@ void drawCharAt(unsigned char c, unsigned char attribute, unsigned char x, unsig
 		screen.bufferX = x;
 		screen.bufferY = y;
 	}
-	screen.buffer[screen.bufferLen++] = c ^(attribute & 0x80);
+	if (!detect.hasColor) {
+		screen.buffer[screen.bufferLen] = c ^(attribute & 0x80);
+	} else {
+		screen.buffer[screen.bufferLen << 1] = c ^(attribute & 0x80);
+		screen.buffer[(screen.bufferLen << 1) + 1] = color;
+	}
+	screen.bufferLen++;
 	screen.bufferX++;
 	if ((c != ' ') && (screen.bufferX > screenX.lineLength[screen.bufferY]))
 		screenX.lineLength[screen.bufferY] = screen.bufferX;

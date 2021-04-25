@@ -20,12 +20,14 @@ void initDetect(void)
 	unsigned short startAddress = (unsigned short)_STARTADDRESS__; // Start the program on 0x400 boundary.  So 0x400 below is good
 	detect.osType = get_ostype() & AT_OS_TYPE_MAIN;
 	detect.fullAscii = 0; // Set for whether {}~ chars are available.
+	detect.hasColor  = 0;
 	if (directDrawTest()) {
 		detect.videoMode = 'D';
 	} else if (XEP80Test()) {
 		detect.videoMode = 'X';
 	} else if (vbxeTest()) {
 		detect.videoMode = 'V';
+		detect.hasColor = 1;
 	} else if (logMapTrickTest()) {
 		detect.videoMode = 'A'; // This is normal Atari mode, but not direct drawing.  I think everything that does this passes directDrawTest, but maybe someday...
 	} else {

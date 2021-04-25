@@ -12,6 +12,25 @@
 #define SGR_BLINKOFF 25
 #define SGR_REVERSEOFF 27
 #define SGR_INVISBLEOFF 28
+#define SGR_FBLACK 30
+#define SGR_FRED 31
+#define SGR_FGREEN 32
+#define SGR_FYELLOW 33
+#define SGR_FBLUE 34
+#define SGR_FMAGENTA 35
+#define SGR_FCYAN 36
+#define SGR_FWHITE 37
+#define SGR_BBLACK 40
+#define SGR_BRED 41
+#define SGR_BGREEN 42
+#define SGR_BYELLOW 43
+#define SGR_BBLUE 44
+#define SGR_BMAGENTA 45
+#define SGR_BCYAN 46
+#define SGR_BWHITE 47
+
+
+#define DEFAULTCOLOR 7
 
 // For characters 0-127
 void processChar(unsigned char c, unsigned char *err);

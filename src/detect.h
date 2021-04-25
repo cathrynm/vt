@@ -7,6 +7,7 @@ typedef struct {
 	unsigned char fullAscii; // Whether { } ~ are available
 	unsigned char chbas, fullChbas;
 	unsigned char osType;
+	unsigned char hasColor;
 } detectStruct;
 extern detectStruct detect;
 

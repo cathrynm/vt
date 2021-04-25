@@ -14,7 +14,7 @@ extern screenXStruct screenX;
 
 void initScreen(void);
 void cursorUpdate(unsigned char x, unsigned char y);
-void drawCharAt(unsigned char c, unsigned char attribute, unsigned char x, unsigned char y);
+void drawCharAt(unsigned char c, unsigned char attribute, unsigned char color, unsigned char x, unsigned char y);
 void drawClearCharsAt(unsigned char len, unsigned char x, unsigned char y);
 void drawClearLine(unsigned char y);
 void drawInsertLine(unsigned char y, unsigned char yBottom);

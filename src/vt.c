@@ -22,7 +22,6 @@
 #define MAXLINELEN 132
 #define NUMPRIVATE 20
 
-
 // character attributes
 #define SGR_NORMAL 0
 #define SGR_BOLD 1
@@ -75,7 +74,7 @@ typedef struct vtScreenStruct vtScreen;
 struct vtScreenStruct {
 	unsigned char x, y;
 	unsigned char tMargin, bMargin, rMargin;
-	unsigned char attribute, attribute1, LED, keypadAlt;
+	unsigned char attribute, attribute1, LED, keypadAlt, color;
 	unsigned char mode[NUMMODES];
 	unsigned char modeP[NUMPRIVATE];
 	unsigned char charSet[2], charSetPick;
@@ -159,6 +158,7 @@ void resetVt(void)
 	vt.keypadAlt = 0;
 	vt.singleShift = 0;
 	vt.lastColumn = 0;
+	vt.color = DEFAULTCOLOR;
 	resetTabs();
 	for (n = 0;n<VTSCREENLINES;n++)vt.lineAttributes[n] = 0;
 	for (n = 0;n<NUMMODES;n++)vt.mode[n] = 0;
@@ -467,11 +467,17 @@ void setAttributes(void)
 		if (esc.params[n] == 0){
 			vt.attribute = 0;
 			vt.attribute1 = 0;
-		} else if (esc.params[n] < 8)vt.attribute |= (1 << esc.params[n]);
-		else if (esc.params[n] < 16) vt.attribute1 |= (1 << (esc.params[n] - 8));
+			vt.color = 7;
+		} else if (esc.params[n] < 8) {
+			vt.attribute |= (1 << esc.params[n]);
+			if (esc.params[n] == SGR_BOLD) {
+				vt.color |= 0x08;
+			}
+		} else if (esc.params[n] < 16) vt.attribute1 |= (1 << (esc.params[n] - 8));
 		else switch(esc.params[n]) {
 			case SGR_BOLDOFF:
 				vt.attribute &= ~(1 << SGR_BOLD);
+				vt.color &= ~0x8;
 				break;
 			case SGR_UNDERLINEOFF:
 				vt.attribute &= ~(1 << SGR_UNDERLINE);
@@ -484,6 +490,26 @@ void setAttributes(void)
 				break;
 			case SGR_INVISBLEOFF:
 				vt.attribute1 &= ~(1 << (SGR_INVISIBLE - 8));
+				break;
+			case SGR_FBLACK:
+			case SGR_FRED:
+			case SGR_FGREEN:
+			case SGR_FYELLOW:
+			case SGR_FBLUE:
+			case SGR_FMAGENTA: 
+			case SGR_FCYAN:
+			case SGR_FWHITE:
+				vt.color = (vt.color & 0xf8) | (esc.params[n] - SGR_FBLACK); 
+				break;
+			case SGR_BBLACK:
+			case SGR_BRED:
+			case SGR_BGREEN:
+			case SGR_BYELLOW:
+			case SGR_BBLUE:
+			case SGR_BMAGENTA: 
+			case SGR_BCYAN:
+			case SGR_BWHITE:
+				vt.color = (vt.color & 0x8f) | ((esc.params[n] - SGR_BBLACK) << 4); 
 				break;
 			default:
 				break;
@@ -546,7 +572,7 @@ void fillWithE(void)
 	vt.tMargin = 0;
 	vt.bMargin = VTSCREENLINES - 1;
 	for (y =0;y<VTSCREENLINES;y++) {
-		for (x = 0;x<vt.rMargin;x++)drawCharAt('E', vt.attribute, x, y);
+		for (x = 0;x<vt.rMargin;x++)drawCharAt('E', vt.attribute, vt.color, x, y);
 	}
 }
 
@@ -566,8 +592,6 @@ unsigned short charToUtf(unsigned char c)
 	if ((set == 'A') && (c == '#')) return 0x00a3; // Pound symbol
 	else if ((set == '0') && (c >= 95) && (c <= 126)) return specialGraphics[c - 95];
 	return c; // B 1, 2
-
-
 }
 
 void insertCharacters(unsigned char num)
@@ -577,7 +601,7 @@ void insertCharacters(unsigned char num)
 	for(;num--;)drawInsertChar(vt.x, vt.y);
 }
 
-void addChar(unsigned char c, unsigned char attrib, unsigned char attrib1)
+void addChar(unsigned char c, unsigned char attrib, unsigned char attrib1, unsigned char color)
 {
 	if (vt.mode[MODE_IRM]) drawInsertChar(vt.x, vt.y);
 	if ((vt.x == vt.rMargin) && vt.lastColumn) {
@@ -589,7 +613,7 @@ void addChar(unsigned char c, unsigned char attrib, unsigned char attrib1)
 		} else vt.x = vt.rMargin;
 	}
 	if (attrib1 & (1 << (SGR_INVISIBLE-8)))c = ' ';
-	drawCharAt(c, attrib, vt.x, vt.y);
+	drawCharAt(c, attrib, color, vt.x, vt.y);
 	if (vt.x < vt.rMargin) {
 		vt.x++;
 		vt.lastColumn = 0;
@@ -601,7 +625,7 @@ void cancelEscape(void)
 	vt.lastColumn = 0;
 	if (esc.commandIndex) {
 		esc.commandIndex = 0;
-		addChar(ERRCHAR, ERRATTRIB, 0);
+		addChar(ERRCHAR, ERRATTRIB, 0, vt.color);
 	}
 }
 
@@ -931,7 +955,7 @@ void processVt52Command(unsigned char c, unsigned char *err)
 void displayUtf8Char(unsigned char c, unsigned char attribute)
 {
 	cursorHide();
-	addChar(c, vt.attribute ^ attribute, vt.attribute1);
+	addChar(c, vt.attribute ^ attribute, vt.attribute1, vt.color);
 	esc.commandIndex = 0;
 }
 
@@ -1015,7 +1039,7 @@ void processChar(unsigned char c, unsigned char *err) {
 					ch = (unsigned char) wCh;attrib = 0;
 					convertAsciiToVisibleChar(&ch, &attrib);
 				} else convertShortToVisibleChar(wCh, &ch, &attrib);
-				addChar(ch, vt.attribute ^ attrib, vt.attribute1);
+				addChar(ch, vt.attribute ^ attrib, vt.attribute1, vt.color);
 			}
 		} else {
 			if (esc.commandIndex) {
@@ -1053,7 +1077,7 @@ void processChar(unsigned char c, unsigned char *err) {
 					ch = (unsigned char) wCh;attrib = 0;
 					convertAsciiToVisibleChar(&ch, &attrib);
 				} else convertShortToVisibleChar(wCh, &ch, &attrib);
-				addChar(ch, vt.attribute ^ attrib, vt.attribute1);
+				addChar(ch, vt.attribute ^ attrib, vt.attribute1, vt.color);
 			}
 		}
 	}

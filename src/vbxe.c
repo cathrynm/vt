@@ -318,13 +318,14 @@ void cursorHideVbxe(void)
 
 void drawCharsAtVbxe(unsigned char *s, unsigned char len)
 {
+    static unsigned char color = 0;
     unsigned char *p, *pStart, c;
     pStart = VBXE_SCREENMEM + screenX.lineTab[OS.rowcrs] + (OS.colcrs << 1);
     vbxe.regs->MEMAC_BANK_SEL = VBXE_SCREENBANK;
     for (p = pStart;len--;) {
         c = *s++;
         *p++ = sAtascii[(c & 0x60) >> 5] | (c & 0x9f);
-        *p++ = 0xf;
+        *p++ = *s++; 
     }
     vbxe.regs->MEMAC_BANK_SEL = 0x0;
 }
