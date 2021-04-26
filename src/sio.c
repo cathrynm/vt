@@ -1,5 +1,5 @@
 #include "main.h"
-#define SIO_TIMEOUT 5
+#define SIO_TIMEOUT 2
 
 #define sio()     \
   (   \
