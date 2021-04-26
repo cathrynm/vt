@@ -11,7 +11,7 @@ unsigned char dcbErrUpdate(unsigned char *oldErr)
   return errUpdate(OS.dcb.dstats, oldErr);
 }
 
-void bufferFixDone(unsigned char *data, unsigned char len, unsigned short outLen, unsigned char dStats, unsigned char **buff, unsigned char err) 
+void bufferFixDone(unsigned char *data, unsigned short len, unsigned short outLen, unsigned char dStats, unsigned char **buff, unsigned char err) 
 {
   if (!(dStats & (SIO_WRITE | SIO_READ)))return;
   if ((dStats & SIO_READ) && (err != ERR_NONE)) {
@@ -22,7 +22,7 @@ void bufferFixDone(unsigned char *data, unsigned char len, unsigned short outLen
 }
 
 // Work around irritating SIO issue. SIO barfs if last character is on 0xff boundary.
-unsigned char *bufferFix(unsigned char *data, unsigned char len, unsigned short outLen, unsigned char dStats, unsigned char **buff, unsigned char *err)
+unsigned char *bufferFix(unsigned char *data, unsigned short len, unsigned short outLen, unsigned char dStats, unsigned char **buff, unsigned char *err)
 {
   unsigned char *buffer;
   *buff = NULL;
@@ -123,7 +123,7 @@ void sioClose(unsigned char device, unsigned char *err)
 }
 
 
-unsigned char sioRead(unsigned char *buffer, unsigned char bufLen, unsigned char device, unsigned char *err) {
+unsigned char sioRead(unsigned char *buffer, unsigned short bufLen, unsigned char device, unsigned char *err) {
   unsigned char *buff;
   unsigned char *aBuffer = NULL;
   aBuffer = bufferFix(buffer, bufLen, bufLen, SIO_READ, &buff, err);
@@ -136,8 +136,7 @@ unsigned char sioRead(unsigned char *buffer, unsigned char bufLen, unsigned char
   OS.dcb.dbuf = aBuffer;
   OS.dcb.dtimlo = SIO_TIMEOUT;
   OS.dcb.dbyt = bufLen;
-  OS.dcb.daux1 = bufLen;
-  OS.dcb.daux2 = 0;
+  OS.dcb.daux = bufLen;
   sio();
   dcbErrUpdate(err);
   bufferFixDone(buffer, bufLen, bufLen, SIO_READ, &buff, *err);

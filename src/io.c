@@ -1,6 +1,6 @@
 #include "main.h"
 
-#define READBUFFERLEN 255
+#define READBUFFERLEN 512
 typedef struct {
 	unsigned char readBuffer[READBUFFERLEN];
 	unsigned char *deviceName;
