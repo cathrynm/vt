@@ -122,17 +122,25 @@ void geturl(int *argc, char ***argv, unsigned char *err)
 			drawString(" USERNAME:");
 			len = getline(&configData.user[3], USERPASSLEN, err);
 			if (*err != ERR_NONE)return;
-			configData.user[0] = '/';
-			configData.user[1] = 'U';
-			configData.user[2] = '=';
-			configData.argv[(*argc)++] = configData.user;
+			OS.stack[0x10] = len;
+			if (len > 1) {
+				crToZero(&configData.user[3], len);
+				configData.user[0] = '/';
+				configData.user[1] = 'U';
+				configData.user[2] = '=';
+				configData.argv[(*argc)++] = configData.user;
+			}
 			drawString(" PASSWORD:");
 			len = getline(&configData.passwd[3], USERPASSLEN, err);
 			if (*err != ERR_NONE)return;
-			configData.passwd[0] = '/';
-			configData.passwd[1] = 'P';
-			configData.passwd[2] = '=';
-			configData.argv[(*argc)++] = configData.passwd;
+			OS.stack[0x11] = len;
+			if (len > 1) {
+				crToZero(&configData.passwd[3], len);
+				configData.passwd[0] = '/';
+				configData.passwd[1] = 'P';
+				configData.passwd[2] = '=';
+				configData.argv[(*argc)++] = configData.passwd;
+			}
 		}
 	}
 }
