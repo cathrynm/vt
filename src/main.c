@@ -50,7 +50,6 @@ void main(int argc, char **argv)
 		argc = 0;
 		screenRestore();
 		closeChio();
-		argc = 0;
 	}
 	closeDetect();
 }
