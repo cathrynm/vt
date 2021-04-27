@@ -729,7 +729,7 @@ void processCommand(unsigned char c, unsigned char *err)
 			vt.x = 0;
 			break;
 		case 'G':
-			cursorPosition(esc.params[0], vt.y);
+			cursorPosition(esc.params[0], vt.y+1);
 			break;
 
 		case 'f':
@@ -951,28 +951,32 @@ void processVt52Command(unsigned char c, unsigned char *err)
 	}
 	esc.commandIndex = 0;
 }
-
-// characters outside of 0-127 are sent here, to be drawn.  They're already translated to be drawable here. 
-void displayUtf8Char(unsigned char c, unsigned char attribute)
-{
-	cursorHide();
-	addChar(c, vt.attribute ^ attribute, vt.attribute1, vt.color);
-	esc.commandIndex = 0;
-}
-
 void debugVt(unsigned char c)
 {
 #if 1
 	c = c;
 #else
+	static unsigned char stop = 0;
 	static unsigned char debugBuffer[256];
 	static unsigned char debugIndex = 0;
+	if (stop)return;
 	OS.stack[0]  = (unsigned char) debugBuffer;
 	OS.stack[1] = (unsigned char) (((unsigned short) debugBuffer) >> 8);
 	OS.stack[2] = debugIndex;
 	debugBuffer[debugIndex++] = c;
+//	if ((c == '|') && (vt.y == 0) && (vt.x >= 79))stop = 1;
 #endif
 }
+// characters outside of 0-127 are sent here, to be drawn.  They're already translated to be drawable here. 
+void displayUtf8Char(unsigned char c, unsigned char attribute)
+{
+	debugVt(c);
+	cursorHide();
+	addChar(c, vt.attribute ^ attribute, vt.attribute1, vt.color);
+	esc.commandIndex = 0;
+}
+
+
 
 void processChar(unsigned char c, unsigned char *err) {
 	unsigned short wCh;
