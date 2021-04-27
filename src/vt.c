@@ -1063,12 +1063,13 @@ void processChar(unsigned char c, unsigned char *err) {
 						}
 					}
 					esc.commandIndex++;
-				} else if (esc.secondChar == '[' && (esc.commandIndex == 2) && (c == '?')) {
-					esc.thirdChar = '?';
+				} else if (esc.secondChar == '[' && (esc.commandIndex == 2) && ((c == '?') || (c == '>'))) {
+					esc.thirdChar = c;
 					esc.commandIndex++;
-				} else if (esc.secondChar == ']') {
+				} else if (esc.secondChar == ']') { // Comes here for xterm title
 				} else {
 					if ((esc.secondChar == '[') && (esc.thirdChar == '?'))processQuestion(c);
+					else if ((esc.secondChar == '[') && (esc.thirdChar == '>'));
 					else if (esc.secondChar == '[')processCommand(c, err);
 					else if (esc.secondChar == '(' || esc.secondChar == ')' ||  esc.secondChar == '*' || esc.secondChar == '+' )processCharSet(esc.secondChar, c);
 					else if (esc.secondChar == '#')processHash(c);
