@@ -28,7 +28,7 @@ void setBurstMode(unsigned char on)
 }
 
 unsigned char isXep80Internal(void) {
-	return xep.xepCharset == XEPCH_INTERN;
+	return (xep.xepCharset == XEPCH_INTERN) && (detect.videoMode == 'X');
 }
 
 void __fastcall__ setXEPXPos(unsigned char hpos) {

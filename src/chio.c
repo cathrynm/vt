@@ -370,13 +370,20 @@ void convertShortToVisibleChar(unsigned short c, unsigned char *ch, unsigned cha
 			case 0x251C:
 				*ch = 1;
 				return;
-			case 0x2518:
+			case 0x255d:
+			case 0x255c:
+			case 0x255b:
+			case 0x2518: // up left corner
 				*ch = 3;
 				return;
 			case 0x2524:
 				*ch = 4;
 				return;
-			case 0x2510:
+			case 0x2556:
+			case 0x2555:
+			case 0x2557:
+
+			case 0x2510: // down-left corner
 				*ch = 5;
 				return;
 			case 0x2571:
@@ -409,14 +416,18 @@ void convertShortToVisibleChar(unsigned short c, unsigned char *ch, unsigned cha
 			case 0x2663:
 				*ch = 0x10;
 				return;
-			case 0x250C:
+			case 0x2552:
+			case 0x2553:
+			case 0x2554:
+			case 0x250C: // down right corner
 				*ch = 0x11;
 				return;
-			case 0x2500:
+			case 0x2550: // double horizontal bar
+			case 0x2500: // horizontal bar
 				*ch = 0x12;
 				return;
 			case 0x253C:
-				*ch = 0x13;
+				*ch = 0x13; // cross
 				return;
 			case 0x2022:
 				*ch = 0x14;
@@ -436,7 +447,10 @@ void convertShortToVisibleChar(unsigned short c, unsigned char *ch, unsigned cha
 			case 0x258C:
 				*ch = 0x19;
 				return;
-			case 0x2514:
+			case 0x255a:
+			case 0x2558:
+			case 0x2559:
+			case 0x2514: // up right corner
 				*ch = 0x1a;
 				return;
 			case 0x241B:
@@ -459,6 +473,10 @@ void convertShortToVisibleChar(unsigned short c, unsigned char *ch, unsigned cha
 				return;
 			case 0x2660: //spade
 				*ch = 0x7b;
+				return;
+			case 0x2551:
+			case 0x2502:
+				*ch = 0x7c; // vertical bar
 				return;
 			case 0x25c0:
 				*ch = 0x7e;
@@ -522,12 +540,36 @@ void convertShortToVisibleChar(unsigned short c, unsigned char *ch, unsigned cha
 	*ch = ' '; // inverse space for undrawable
 	*attrib = 0x80;
 }
+void debugCh(unsigned char c)
+{
+#if 1
+	c = c;
+#else
+	static unsigned char stop = 0;
+	static unsigned char debugBuffer[256];
+	static unsigned char debugIndex = 0;
+	if (stop)return;
+	OS.stack[0]  = (unsigned char) debugBuffer;
+	OS.stack[1] = (unsigned char) (((unsigned short) debugBuffer) >> 8);
+	OS.stack[2] = debugIndex;
+	if (c == 'e') {
+		if ((debugBuffer[(debugIndex-1) & 0xff] == 'n') &&
+			(debugBuffer[(debugIndex-2) & 0xff] == 'o') &&
+			(debugBuffer[(debugIndex-3) & 0xff] == 'h') &&
+			(debugBuffer[(debugIndex-4) & 0xff] == 'P')) {
+			stop = 1;
+		}
+	}
+	debugBuffer[debugIndex++] = c;
 
+#endif
+}
 
 void decodeUtf8Char(unsigned char c, unsigned char *err)
 {
 	unsigned char ch, attrib;
-	switch(chio.utfType) {
+	debugCh(c);
+	switch(chio.utfType) { // e2 95 90
 		case 0:
 			if (!(c & 0x80))processChar(c, err);
 			else if ((c & 0xe0) == 0xc0) {
@@ -541,18 +583,18 @@ void decodeUtf8Char(unsigned char c, unsigned char *err)
 				chio.utfType = 3;
 				chio.utfLong = ((unsigned long)c) << 18;
 				chio.utfIndex = 1;
-			} // else Invalid UTF8, just drop it.
+			}
 			break;
 		case 1:
-			if ((c & 0xc0) == 0xc0) {
+			if ((c & 0xc0) == 0x80) {
 				chio.utfWord |= (c & 0x3f);
 				convertShortToVisibleChar(chio.utfWord, &ch, &attrib);
 				displayUtf8Char(ch, attrib);
-			} 	// else invalid utftype
+			}
 			chio.utfType = 0;
 			break;
 		case 2:
-			if ((c & 0xc0) == 0xc0) {
+			if ((c & 0xc0) == 0x80) {
 				c &= 0x3f;
 				if (chio.utfIndex == 1) {
 					chio.utfWord |= ((unsigned short)c) << 6;
@@ -560,12 +602,15 @@ void decodeUtf8Char(unsigned char c, unsigned char *err)
 				} else {
 					chio.utfWord |= ((unsigned short)c);
 					convertShortToVisibleChar(chio.utfWord, &ch, &attrib);
+					displayUtf8Char(ch, attrib);
 					chio.utfType = 0;
 				}
-			} else chio.utfType = 0; // invalid utf8
+			} else {
+				chio.utfType = 0; // invalid utf8
+			}
 			break;
 		case 3:
-			if ((c & 0xc0) == 0xc0) {
+			if ((c & 0xc0) == 0x80) {
 				c &= 0x3f;
 				if (chio.utfIndex == 1) {
 					chio.utfLong |= ((unsigned long)c) << 12;
@@ -579,7 +624,9 @@ void decodeUtf8Char(unsigned char c, unsigned char *err)
 					displayUtf8Char(ch, attrib);
 					chio.utfType = 0;
 				}
-			} else chio.utfType = 0; // invalid utf8
+			} else {
+				chio.utfType = 0; // invalid utf8
+			}
 			break;
 	}
 }
