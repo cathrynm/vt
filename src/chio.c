@@ -367,7 +367,10 @@ void convertShortToVisibleChar(unsigned short c, unsigned char *ch, unsigned cha
 			case 0x2665: // cntrl characters
 				*ch = 0;
 				return;
-			case 0x251C:
+			case 0x251C: // VBar+Right
+			case 0x255e:
+			case 0x255f:
+			case 0x2560:
 				*ch = 1;
 				return;
 			case 0x255d:
@@ -376,13 +379,15 @@ void convertShortToVisibleChar(unsigned short c, unsigned char *ch, unsigned cha
 			case 0x2518: // up left corner
 				*ch = 3;
 				return;
-			case 0x2524:
+			case 0x2561:
+			case 0x2562:
+			case 0x2563:
+			case 0x2524: // VBar + left
 				*ch = 4;
 				return;
 			case 0x2556:
 			case 0x2555:
 			case 0x2557:
-
 			case 0x2510: // down-left corner
 				*ch = 5;
 				return;
@@ -427,6 +432,9 @@ void convertShortToVisibleChar(unsigned short c, unsigned char *ch, unsigned cha
 				*ch = 0x12;
 				return;
 			case 0x253C:
+			case 0x256c:
+			case 0x256b:
+			case 0x256a:
 				*ch = 0x13; // cross
 				return;
 			case 0x2022:
@@ -436,12 +444,18 @@ void convertShortToVisibleChar(unsigned short c, unsigned char *ch, unsigned cha
 				*ch = 0x15;
 				return;
 			case 0x258E:
-				*ch = 0x16;
+				*ch = 0x16; // vbar left
 				return;
-			case 0x252C:
+			case 0x252C: // HBAR Down
+			case 0x2566:
+			case 0x2564:
+			case 0x2565:
 				*ch = 0x17;
 				return;
-			case 0x2534:
+			case 0x2534: // hbar UP
+			case 0x2569:
+			case 0x2567:
+			case 0x2568:
 				*ch = 0x18;
 				return;
 			case 0x258C:
@@ -530,6 +544,9 @@ void convertShortToVisibleChar(unsigned short c, unsigned char *ch, unsigned cha
 				*attrib = 0x80;
 				return;
 			case 0x2588:
+			case 0x2591:
+			case 0x2592:
+			case 0x2593:
 				*ch = 0x20;
 				*attrib = 0x80;
 				return;
