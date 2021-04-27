@@ -90,7 +90,7 @@ void convertLongToVisibleChar(unsigned long c, unsigned char *ch, unsigned char 
 void convertAsciiToVisibleChar(unsigned char *ch, unsigned char *attrib)
 {
 	if ((*ch >= 32 && *ch <=95) || (*ch >= 97 && *ch <= 122) || (*ch == 124))return;
-	if (chio.fullAscii && ((*ch == 116) || (*ch == 123) || (*ch == 125) || (*ch == 126)))return;
+	if (chio.fullAscii && ((*ch == 96) || (*ch == 123) || (*ch == 125) || (*ch == 126)))return;
 	*attrib = ERRATTRIB;  // Atari are missing { } ` ~.  Show as undrawable.  127, 0-31 are undrawable anyway.
 	*ch = ERRCHAR;
 }
@@ -547,8 +547,12 @@ void convertShortToVisibleChar(unsigned short c, unsigned char *ch, unsigned cha
 			case 0x2591:
 			case 0x2592:
 			case 0x2593:
-				*ch = 0x20;
-				*attrib = 0x80;
+				if (chio.fullAscii) {
+					*ch = 0x7f;
+				} else {
+					*ch = 0x20;
+					*attrib = 0x80;
+				}
 				return;
 			default:
 				break;
