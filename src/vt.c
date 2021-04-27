@@ -982,7 +982,9 @@ void processChar(unsigned char c, unsigned char *err) {
 	cursorHide();
 	if (c < VT_SPACE)switch(c) {
 		case VT_BEL:
-			drawBell();
+			if (esc.commandIndex && esc.secondChar == ']') {
+				esc.commandIndex = 0;
+			} else drawBell();
 			break;
 		case VT_BS:
 			moveLeft(1);
@@ -1044,7 +1046,7 @@ void processChar(unsigned char c, unsigned char *err) {
 			}
 		} else {
 			if (esc.commandIndex) {
-				if ((esc.commandIndex == 1) && (c == '[' || c == '(' || c == ')' || c == '#' || c == '*' || c == '+')) {
+				if ((esc.commandIndex == 1) && (c == '[' || c == ']' || c == '(' || c == ')' || c == '#' || c == '*' || c == '+')) {
 					esc.secondChar = c;
 					esc.commandIndex++;
 				} else if ((esc.secondChar == '[') && isdigit(c)) {
@@ -1064,6 +1066,7 @@ void processChar(unsigned char c, unsigned char *err) {
 				} else if (esc.secondChar == '[' && (esc.commandIndex == 2) && (c == '?')) {
 					esc.thirdChar = '?';
 					esc.commandIndex++;
+				} else if (esc.secondChar == ']') {
 				} else {
 					if ((esc.secondChar == '[') && (esc.thirdChar == '?'))processQuestion(c);
 					else if (esc.secondChar == '[')processCommand(c, err);
