@@ -101,14 +101,18 @@ void clearScreen(unsigned char which);
 // 0 = UP 1 = DOWN 2 = LEFT 3 = RIGHT
 void vtSendCursor(unsigned char cursor, unsigned char *err)
 {
-	static unsigned char *cusorCodes[2][4] = {
+	static unsigned char *cusorCodes[3][4] = {
 		{
 			"\033[A", "\033[B", "\033[D", "\033[C"  
 		},
 		{
 			"\033OA", "\033OB", "\033OD", "\033OC"
-		}};
-	unsigned char *s = cusorCodes[vt.modeP[MODEP_DECCKM]][cursor];
+		},
+		{
+			"\033A", "\033B", "\033D", "\033C"
+		}
+		};
+	unsigned char *s = cusorCodes[(!vt.modeP[MODEP_DECANM])? 2: vt.modeP[MODEP_DECCKM]][cursor];
 	sendResponse(s, strlen(s), err);
 }
 
@@ -208,6 +212,7 @@ void setMode(unsigned char mode, unsigned char val)
 void setModeP(unsigned char mode, unsigned char val)
 {
 	vt.modeP[mode] = val;
+	OS.stack[0x20 + mode] = val;
 	switch(mode) {
 		case MODEP_DECCOLM: // 0 = 80 column, 1 = 132 column
 			vt.lastColumn = 0;
