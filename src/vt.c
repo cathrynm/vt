@@ -1021,13 +1021,14 @@ void debugVt(unsigned char c)
 #else
 	static unsigned char stop = 0;
 	static unsigned char debugBuffer[256];
-	static unsigned char debugIndex = 0;
+	static unsigned short debugIndex = 0;
 	if (stop)return;
 	OS.stack[0]  = (unsigned char) debugBuffer;
 	OS.stack[1] = (unsigned char) (((unsigned short) debugBuffer) >> 8);
 	OS.stack[2] = debugIndex;
-	debugBuffer[debugIndex++] = c;
-	if ((vt.x == 1) && (vt.y == 22) && (c == 'V') && vt.color) stop = 1;
+	OS.stack[3] = debugIndex >> 8;
+	debugBuffer[(debugIndex++) & 0xff] = c;
+//	if ((vt.x == 1) && (vt.y == 22) && (c == 'V') && vt.color) stop = 1;
 #endif
 }
 // characters outside of 0-127 are sent here, to be drawn.  They're already translated to be drawable here. 

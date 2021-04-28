@@ -95,8 +95,13 @@ typedef struct {
         unsigned short source_adr;
     };
     unsigned char source_adr2;
-    unsigned char source_step_y_0;
-    unsigned char source_step_y_1;
+    union {
+        struct {
+            unsigned char source_step_y_0;
+            unsigned char source_step_y_1;
+        };
+        signed short source_step_y;
+    };
     unsigned char source_step_x;
     union {
         struct {
@@ -106,8 +111,13 @@ typedef struct {
         unsigned short dest_adr;
     };
     unsigned char dest_adr2;
-    unsigned char dest_step_y_0;
-    unsigned char dest_step_y_1;
+    union {
+        struct {
+            unsigned char dest_step_y_0;
+            unsigned char dest_step_y_1;
+        };
+        signed short dest_step_y;
+    };
     unsigned char dest_step_x;
     union {
         struct {
@@ -224,15 +234,15 @@ void initBlit(void)
     vbxe.regs->BL_ADR2 = VBXE_BLITXBANK;
 }
 
-void blit(unsigned short dest, unsigned short source, unsigned char wid, unsigned char hi)
+void blit(unsigned short dest, unsigned short source, unsigned char wid, unsigned char hi, unsigned char rev)
 {
     blitterStruct *blitter = VBXE_BLITMEM;
     while (vbxe.regs->BLITTER_BUSY);
     vbxe.regs->MEMAC_BANK_SEL = VBXE_BLITBANK;
     blitter->source_adr = source;
-    blitter->source_step_y_0 = wid << 1;
+    blitter->source_step_y = (rev? -wid: wid) << 1;
     blitter->dest_adr = dest;
-    blitter->dest_step_y_0 = wid << 1;
+    blitter->dest_step_y = blitter->source_step_y;
     blitter->blt_width = wid << 1;
     blitter->blt_height = hi - 1;
     blitter->blt_and_mask = (source != 0)? 0xff: 0;
@@ -309,7 +319,7 @@ void clearScreenVbxe(unsigned char color)
         for (yp = 0;yp < SCREENLINES;yp++) {
             drawClearLine(yp, color);
         }
-    } else blit(VBXE_SCREENADDR, 0, VBXE_WIDTH, VBXE_HEIGHT);
+    } else blit(VBXE_SCREENADDR, 0, VBXE_WIDTH, VBXE_HEIGHT, 0);
 }
 
 void cursorUpdateVbxe(unsigned char x, unsigned char y)
@@ -353,21 +363,21 @@ void drawCharsAtVbxe(unsigned char *s, unsigned char len)
 void insertLineVbxe(unsigned char y, unsigned char yBottom, unsigned char color)
 {
     if (y < yBottom) {
-        blit(VBXE_SCREENADDR + screenX.lineTab[y + 1], VBXE_SCREENADDR + screenX.lineTab[y], VBXE_WIDTH, yBottom - y);
+        blit(VBXE_SCREENADDR + screenX.lineTab[yBottom], VBXE_SCREENADDR + screenX.lineTab[yBottom - 1], VBXE_WIDTH, yBottom - y, 1);
     }
     if (color) {
         drawClearLine(y, color);
-    } else blit(VBXE_SCREENADDR + screenX.lineTab[y], 0, VBXE_WIDTH, 1);
+    } else blit(VBXE_SCREENADDR + screenX.lineTab[y], 0, VBXE_WIDTH, 1, 0);
 }
 
 void deleteLineVbxe(unsigned char y, unsigned char yBottom, unsigned char color)
 {
     if (y < yBottom) {
-        blit(VBXE_SCREENADDR + screenX.lineTab[y], VBXE_SCREENADDR + screenX.lineTab[y+1], VBXE_WIDTH, yBottom - y);
+        blit(VBXE_SCREENADDR + screenX.lineTab[y], VBXE_SCREENADDR + screenX.lineTab[y+1], VBXE_WIDTH, yBottom - y, 0);
     }
     if (color) {
         drawClearLine(yBottom, color);
-    } else blit(VBXE_SCREENADDR + screenX.lineTab[yBottom], 0, VBXE_WIDTH, 1);
+    } else blit(VBXE_SCREENADDR + screenX.lineTab[yBottom], 0, VBXE_WIDTH, 1, 0);
 }
 
 void insertCharVbxe(unsigned char x, unsigned char y, unsigned char len, unsigned char color)
@@ -375,7 +385,7 @@ void insertCharVbxe(unsigned char x, unsigned char y, unsigned char len, unsigne
     unsigned char *pStart;
     if (x + len >= VBXE_WIDTH)len--;
     if (len > 0)
-        blit(VBXE_SCREENADDR + screenX.lineTab[y] + (x << 1) + 2, VBXE_SCREENADDR + screenX.lineTab[y+1] + (x << 1), len, 1);
+        blit(VBXE_SCREENADDR + screenX.lineTab[y] + (x << 1) + 2, VBXE_SCREENADDR + screenX.lineTab[y+1] + (x << 1), len, 1, 0);
     pStart = VBXE_SCREENMEM + screenX.lineTab[y] + (x << 1);
     vbxe.regs->MEMAC_BANK_SEL = VBXE_SCREENBANK;
     *pStart++ = 0;
@@ -387,7 +397,7 @@ void deleteCharVbxe(unsigned char x, unsigned char y, unsigned char len, unsigne
 {
     unsigned char *pStart;
     if (len > 1)
-        blit(VBXE_SCREENADDR + screenX.lineTab[y] + (x << 1), VBXE_SCREENADDR + screenX.lineTab[y+1] + (x << 1) + 2, len - 1, 1);
+        blit(VBXE_SCREENADDR + screenX.lineTab[y] + (x << 1), VBXE_SCREENADDR + screenX.lineTab[y+1] + (x << 1) + 2, len - 1, 1, 0);
     pStart = VBXE_SCREENMEM + screenX.lineTab[y] + ((x + len - 1) << 1);
     vbxe.regs->MEMAC_BANK_SEL = VBXE_SCREENBANK;
     *pStart++ = 0;
