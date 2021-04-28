@@ -398,3 +398,12 @@ void drawDarkLight(unsigned char val)  // XEP 80 does this.
 	val = val;
 }
 
+void drawAltScreen(unsigned char alt, unsigned char clear) // 1 for alt, 0 for main.
+{
+	alt = alt; clear = clear;
+	switch(detect.videoMode) {
+		default:
+			drawClearScreen(0);
+			break;
+	}
+}

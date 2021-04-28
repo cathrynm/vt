@@ -122,7 +122,6 @@ void geturl(int *argc, char ***argv, unsigned char *err)
 			drawString(" USERNAME:");
 			len = getline(&configData.user[3], USERPASSLEN, err);
 			if (*err != ERR_NONE)return;
-			OS.stack[0x10] = len;
 			if (len > 1) {
 				crToZero(&configData.user[3], len);
 				configData.user[0] = '/';
@@ -133,7 +132,6 @@ void geturl(int *argc, char ***argv, unsigned char *err)
 			drawString(" PASSWORD:");
 			len = getline(&configData.passwd[3], USERPASSLEN, err);
 			if (*err != ERR_NONE)return;
-			OS.stack[0x11] = len;
 			if (len > 1) {
 				crToZero(&configData.passwd[3], len);
 				configData.passwd[0] = '/';

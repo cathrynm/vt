@@ -41,13 +41,6 @@ void initDetect(void)
 			detect.fullChbas = startAddress >> 8;
 		}
 	}
-	OS.stack[4] = detect.videoMode;
-	OS.stack[5] = detect.fullChbas;
-	OS.stack[6] = ((unsigned short)startAddress) & 0xff;
-	OS.stack[7] = ((unsigned short)startAddress) >> 8;
-	OS.stack[8] = ((unsigned short)OS.memlo) & 0xff;
-	OS.stack[9] = ((unsigned short)OS.memlo) >> 8;
-
 	if ((unsigned short) OS.memlo < startAddress)
 		_heapadd(OS.memlo, startAddress - (unsigned short) OS.memlo); // recover memory below font and above lomem
 }

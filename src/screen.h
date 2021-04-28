@@ -33,5 +33,6 @@ void cursorHide(void);
 void callEColonSpecial(unsigned char command, unsigned char aux1, unsigned char aux2);
 void callEColonPutBytes(unsigned char *buf, unsigned char len);
 void callEColonPutByte(unsigned char ch);
+void drawAltScreen(unsigned char alt, unsigned char clear);
 
 #endif

@@ -58,6 +58,9 @@
 #define MODEP_DECPFF 18
 #define MODEP_DECPEX 19
 #define MODEP_SHOWCURSOR 25
+#define MODEP_ALTBUFFER 1047
+
+
 #define NUMMODEP 26
 
 #define SPECIALFLAG_LFWITHCR 1
@@ -68,7 +71,10 @@ typedef struct escDataStruct escStructType;
 struct escDataStruct {
 	unsigned char secondChar, thirdChar, commandIndex, paramCount;
 	unsigned char params[MAXPARAMS];
+	unsigned short wParams[MAXPARAMS];
 };
+
+#define NUMEXTRAP 16
 
 typedef struct vtScreenStruct vtScreen;
 struct vtScreenStruct {
@@ -77,6 +83,7 @@ struct vtScreenStruct {
 	unsigned char attribute, attribute1, LED, keypadAlt, color;
 	unsigned char mode[NUMMODES];
 	unsigned char modeP[NUMPRIVATE];
+	unsigned short extraModeP[NUMEXTRAP];
 	unsigned char charSet[2], charSetPick;
 	unsigned char tabs[(MAXLINELEN+7)/8];
 	unsigned char lineAttributes[VTSCREENLINES];
@@ -97,6 +104,8 @@ vtScreen vt = {0};
 
 void cursorSave(void);
 void clearScreen(unsigned char which);
+void cursorRestore(void);
+
 
 // 0 = UP 1 = DOWN 2 = LEFT 3 = RIGHT
 void vtSendCursor(unsigned char cursor, unsigned char *err)
@@ -167,6 +176,7 @@ void resetVt(void)
 	for (n = 0;n<VTSCREENLINES;n++)vt.lineAttributes[n] = 0;
 	for (n = 0;n<NUMMODES;n++)vt.mode[n] = 0;
 	for (n = 0;n<NUMPRIVATE;n++)vt.modeP[n] = 0;
+	vt.extraModeP[0] = 0;
 	vt.modeP[MODEP_DECANM] = 1; 
 	vt.mode[MODE_SRM] = 1; // Disable local echo
 	vt.modeP[MODEP_SHOWCURSOR] = 1;
@@ -208,11 +218,55 @@ void setMode(unsigned char mode, unsigned char val)
 	}
 }
 
+void setExtraModeP(unsigned short mode, unsigned char val)
+{
+	unsigned char n, m;
+		OS.stack[0x18] = ((unsigned short) vt.extraModeP) & 0xff;
+	OS.stack[0x19] = ((unsigned short) vt.extraModeP) >> 8;
+	if (val) {
+		for (n = 0;n < NUMEXTRAP && vt.extraModeP[n];n++) {
+			if (vt.extraModeP[n] == mode)return;
+		}
+		if (n >= NUMEXTRAP)return;
+		vt.extraModeP[n] = mode;
+	} else {
+		for (n = 0;n < NUMEXTRAP && vt.extraModeP[n];n++) {
+			if (vt.extraModeP[n] == mode)break;
+		}
+		if (n >= NUMEXTRAP)return;
+		for (m = n;(m+1<NUMEXTRAP) && vt.extraModeP[m+1];m++) {
+			vt.extraModeP[m] = vt.extraModeP[m+1];
+		}
+		vt.extraModeP[m] = 0;
+	}
+
+	switch(mode) {
+		case 1036: // Do see this getting used
+			break;
+		case 47:
+		case 1047:
+			drawAltScreen(val, 0);
+			break;
+		case 1048:
+			if (val)cursorSave();
+			else cursorRestore();
+			break;
+		case 1049:
+			if (val) {
+				cursorSave();
+				drawAltScreen(1, 1);
+			} else {
+				drawAltScreen(0, 0);
+				cursorRestore();
+			}
+			break;
+		default:break;
+	}
+}
 
 void setModeP(unsigned char mode, unsigned char val)
 {
 	vt.modeP[mode] = val;
-	OS.stack[0x20 + mode] = val;
 	switch(mode) {
 		case MODEP_DECCOLM: // 0 = 80 column, 1 = 132 column
 			vt.lastColumn = 0;
@@ -678,9 +732,11 @@ void processQuestion(unsigned char c)
 			clearLine(esc.params[0]); // should not set attributes
 			break;
 		case 'h':
-			if ((esc.params[0] < NUMMODEP) && !vt.modeP[esc.params[0]]) {
+			if (esc.wParams[0] >= NUMMODEP) {
+				setExtraModeP(esc.wParams[0], 1);
+			} else if ((esc.params[0] < NUMMODEP) && !vt.modeP[esc.params[0]]) {
 				setModeP(esc.params[0], 1);
-			}
+			} else
 			break;
 		case 'i': // printer stuff
 			switch(esc.params[0]) {
@@ -691,7 +747,9 @@ void processQuestion(unsigned char c)
 			}
 			break;
 		case 'l': // rest mode
-			if ((esc.params[0] < NUMMODEP) && vt.modeP[esc.params[0]]) {
+			if (esc.wParams[0] >= NUMMODEP) {
+				setExtraModeP(esc.wParams[0], 0);
+			} else if ((esc.params[0] < NUMMODEP) && vt.modeP[esc.params[0]]) {
 				setModeP(esc.params[0], 0);
 			}
 			break;
@@ -958,18 +1016,17 @@ void processVt52Command(unsigned char c, unsigned char *err)
 }
 void debugVt(unsigned char c)
 {
-#if 1
+#if 0
 	c = c;
 #else
 	static unsigned char stop = 0;
 	static unsigned char debugBuffer[256];
 	static unsigned char debugIndex = 0;
 	if (stop)return;
-	OS.stack[0]  = (unsigned char) debugBuffer;
-	OS.stack[1] = (unsigned char) (((unsigned short) debugBuffer) >> 8);
-	OS.stack[2] = debugIndex;
+//	OS.stack[0]  = (unsigned char) debugBuffer;
+//	OS.stack[1] = (unsigned char) (((unsigned short) debugBuffer) >> 8);
+//	OS.stack[2] = debugIndex;
 	debugBuffer[debugIndex++] = c;
-//	if ((c == '|') && (vt.y == 0) && (vt.x >= 79))stop = 1;
 #endif
 }
 // characters outside of 0-127 are sent here, to be drawn.  They're already translated to be drawable here. 
@@ -1031,6 +1088,8 @@ void processChar(unsigned char c, unsigned char *err) {
 			esc.paramCount = 1;
 			esc.params[0] = 0;
 			esc.params[1] = 0;
+			esc.wParams[0] = 0;
+			esc.wParams[1] = 0;
 			esc.commandIndex = 1;
 			esc.secondChar = 0;
 			esc.thirdChar = 0;
@@ -1060,15 +1119,17 @@ void processChar(unsigned char c, unsigned char *err) {
 					esc.commandIndex++;
 				} else if ((esc.secondChar == '[') && isdigit(c)) {
 					if (esc.paramCount - 1 < MAXPARAMS) {
-						paramVal = (unsigned short)esc.params[esc.paramCount - 1] * (unsigned short)10 + (c - (unsigned char)'0');
+						paramVal = (unsigned short)esc.wParams[esc.paramCount - 1] * (unsigned short)10 + (c - (unsigned char)'0');
 						esc.params[esc.paramCount - 1] = paramVal < 255? paramVal: 255;
+						esc.wParams[esc.paramCount -1] = paramVal;
 					}
 					esc.commandIndex++;
 				} else if ((esc.secondChar == '[') && (c==';')) {
 					if (esc.paramCount < MAXPARAMS) {
 						esc.paramCount++;
 						if (esc.paramCount < MAXPARAMS) {
-							esc.params[esc.paramCount] = 0;
+							esc.params[esc.paramCount-1] = 0;
+							esc.wParams[esc.paramCount-1] = 0;
 						}
 					}
 					esc.commandIndex++;

@@ -570,9 +570,9 @@ void debugCh(unsigned char c)
 	static unsigned char debugBuffer[256];
 	static unsigned char debugIndex = 0;
 	if (stop)return;
-	OS.stack[0]  = (unsigned char) debugBuffer;
-	OS.stack[1] = (unsigned char) (((unsigned short) debugBuffer) >> 8);
-	OS.stack[2] = debugIndex;
+//	OS.stack[0]  = (unsigned char) debugBuffer;
+//	OS.stack[1] = (unsigned char) (((unsigned short) debugBuffer) >> 8);
+//	OS.stack[2] = debugIndex;
 	if (c == 'e') {
 		if ((debugBuffer[(debugIndex-1) & 0xff] == 'n') &&
 			(debugBuffer[(debugIndex-2) & 0xff] == 'o') &&
