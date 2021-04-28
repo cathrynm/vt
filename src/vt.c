@@ -722,6 +722,7 @@ void vt52CursorPosition(unsigned char x, unsigned char y)
 
 void processQuestion(unsigned char c)
 {
+	unsigned char n;
 	switch(c) {
 		case 'J':
 			clearScreen(esc.params[0]); // Should not set attributes
@@ -730,11 +731,13 @@ void processQuestion(unsigned char c)
 			clearLine(esc.params[0]); // should not set attributes
 			break;
 		case 'h':
-			if (esc.wParams[0] >= NUMMODEP) {
-				setExtraModeP(esc.wParams[0], 1);
-			} else if ((esc.params[0] < NUMMODEP) && !vt.modeP[esc.params[0]]) {
-				setModeP(esc.params[0], 1);
-			} else
+			for (n = 0;n < esc.paramCount;n++) {
+				if (esc.wParams[n] >= NUMMODEP) {
+					setExtraModeP(esc.wParams[n], 1);
+				} else if ((esc.params[n] < NUMMODEP) && !vt.modeP[esc.params[n]]) {
+					setModeP(esc.params[n], 1);
+				}
+			}
 			break;
 		case 'i': // printer stuff
 			switch(esc.params[0]) {
@@ -744,11 +747,13 @@ void processQuestion(unsigned char c)
 						break;
 			}
 			break;
-		case 'l': // rest mode
-			if (esc.wParams[0] >= NUMMODEP) {
-				setExtraModeP(esc.wParams[0], 0);
-			} else if ((esc.params[0] < NUMMODEP) && vt.modeP[esc.params[0]]) {
-				setModeP(esc.params[0], 0);
+		case 'l': // reset mode 
+			for (n = 0;n < esc.paramCount;n++) {
+				if (esc.wParams[n] >= NUMMODEP) {
+					setExtraModeP(esc.wParams[n], 0);
+				} else if ((esc.params[n] < NUMMODEP) && vt.modeP[esc.params[n]]) {
+					setModeP(esc.params[n], 0);
+				}
 			}
 			break;
 		case 'n': // printer stuff
