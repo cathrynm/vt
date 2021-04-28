@@ -221,8 +221,6 @@ void setMode(unsigned char mode, unsigned char val)
 void setExtraModeP(unsigned short mode, unsigned char val)
 {
 	unsigned char n, m;
-		OS.stack[0x18] = ((unsigned short) vt.extraModeP) & 0xff;
-	OS.stack[0x19] = ((unsigned short) vt.extraModeP) >> 8;
 	if (val) {
 		for (n = 0;n < NUMEXTRAP && vt.extraModeP[n];n++) {
 			if (vt.extraModeP[n] == mode)return;
@@ -794,7 +792,9 @@ void processCommand(unsigned char c, unsigned char *err)
 		case 'G':
 			cursorPosition(esc.params[0], vt.y+1);
 			break;
-
+		case 'd':
+			cursorPosition(vt.x+1, esc.params[0] < VTSCREENLINES? esc.params[0]: VTSCREENLINES -1);
+			break; 
 		case 'f':
 		case 'H': // x, y cursor position
 			cursorPosition(esc.params[1], esc.params[0]);
@@ -1016,17 +1016,18 @@ void processVt52Command(unsigned char c, unsigned char *err)
 }
 void debugVt(unsigned char c)
 {
-#if 0
+#if 1
 	c = c;
 #else
 	static unsigned char stop = 0;
 	static unsigned char debugBuffer[256];
 	static unsigned char debugIndex = 0;
 	if (stop)return;
-//	OS.stack[0]  = (unsigned char) debugBuffer;
-//	OS.stack[1] = (unsigned char) (((unsigned short) debugBuffer) >> 8);
-//	OS.stack[2] = debugIndex;
+	OS.stack[0]  = (unsigned char) debugBuffer;
+	OS.stack[1] = (unsigned char) (((unsigned short) debugBuffer) >> 8);
+	OS.stack[2] = debugIndex;
 	debugBuffer[debugIndex++] = c;
+	if ((vt.x == 0) && (vt.y == 0) && (c == 0x12) && vt.color) stop = 1;
 #endif
 }
 // characters outside of 0-127 are sent here, to be drawn.  They're already translated to be drawable here. 
