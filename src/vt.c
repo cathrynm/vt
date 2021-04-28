@@ -793,7 +793,7 @@ void processCommand(unsigned char c, unsigned char *err)
 			cursorPosition(esc.params[0], vt.y+1);
 			break;
 		case 'd':
-			cursorPosition(vt.x+1, esc.params[0] < VTSCREENLINES? esc.params[0]: VTSCREENLINES -1);
+			cursorPosition(vt.x+1, esc.params[0] <= VTSCREENLINES? esc.params[0]: VTSCREENLINES);
 			break; 
 		case 'f':
 		case 'H': // x, y cursor position
@@ -1027,7 +1027,7 @@ void debugVt(unsigned char c)
 	OS.stack[1] = (unsigned char) (((unsigned short) debugBuffer) >> 8);
 	OS.stack[2] = debugIndex;
 	debugBuffer[debugIndex++] = c;
-	if ((vt.x == 0) && (vt.y == 0) && (c == 0x12) && vt.color) stop = 1;
+	if ((vt.x == 1) && (vt.y == 22) && (c == 'V') && vt.color) stop = 1;
 #endif
 }
 // characters outside of 0-127 are sent here, to be drawn.  They're already translated to be drawable here. 
