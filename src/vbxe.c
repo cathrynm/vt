@@ -325,7 +325,10 @@ void clearScreenVbxe(unsigned char color)
 void cursorUpdateVbxe(unsigned char x, unsigned char y)
 {
     unsigned char *pStart = VBXE_SCREENMEM + screenX.lineTab[y] + (x << 1);
-    if (vbxe.cursorOn)cursorHideVbxe();
+    if (vbxe.cursorOn) {
+        if ((x == vbxe.cursorX) && (y == vbxe.cursorY))return;
+        cursorHideVbxe();
+    }
     vbxe.regs->MEMAC_BANK_SEL = VBXE_SCREENBANK;
     *pStart++ |= 0x80;
     if (!*pStart)*pStart = currentColor();
