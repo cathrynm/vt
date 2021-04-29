@@ -71,11 +71,11 @@ void __fastcall__ setXEPLastChar(unsigned char c)
 		OS.rowcrs = XEPLINES-1;
 		OS.colcrs = XEPRMARGIN+3;
 		xepCursorShadow();
-		xep.currentXepX = OS.lmargn;
+		xep.currentXepX = OS.colcrs;
 	}
 
 	callEColonPutByte(c);
-	xep.currentXepX =  (c == CH_EOL)? OS.lmargn : XEPRMARGIN;
+	xep.currentXepX =  (c == CH_EOL)? OS.lmargn : xep.currentXepX+1;
 }
 
 void __fastcall__ setXEPCommand(unsigned char c, unsigned char command)
