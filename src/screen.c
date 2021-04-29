@@ -12,6 +12,7 @@ typedef struct {
 	unsigned char clearBuffer[SCREENCOLUMNS*2];
 	unsigned char buffer[SCREENCOLUMNS*2];
 	void (*eColonSpecial)();
+	unsigned char altScreen;
 }screenStruct;
 
 screenXStruct screenX;
@@ -67,6 +68,7 @@ void initScreen(void)
 	screen.bufferLen = 0;
 	screen.bufferX = 255;
 	screen.bufferY = 0;
+	screen.altScreen = 0;
 	for (n = 0;n < 11;n++) {
 		if (OS.hatabs[n].id != 'E')continue;
 		devhdl = OS.hatabs[n].devhdl;
@@ -400,10 +402,12 @@ void drawDarkLight(unsigned char val)  // XEP 80 does this.
 
 void drawAltScreen(unsigned char alt, unsigned char clear) // 1 for alt, 0 for main.
 {
-	alt = alt; clear = clear;
 	switch(detect.videoMode) {
 		default:
-			drawClearScreen(0);
+			if ((screen.altScreen != alt) || clear) {
+				drawClearScreen(0);  // VBXE/Direct, maybe can do altscreen proper.
+				screen.altScreen = alt;
+			}
 			break;
 	}
 }

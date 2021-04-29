@@ -770,6 +770,7 @@ void processQuestion(unsigned char c)
 
 void processCommand(unsigned char c, unsigned char *err)
 {
+	unsigned char n;
 	switch(c) {
 		case '@':
 			insertCharacters(esc.params[0]);
@@ -829,15 +830,19 @@ void processCommand(unsigned char c, unsigned char *err)
 			tabClear(esc.params[0]);
 			break;
 		case 'h': // set mode  20 = linefeed newline mode // 4 = insert mode  4l = replace mode.
-			if ((esc.params[0] < NUMMODES) && !vt.mode[esc.params[0]]) {
-				setMode(esc.params[0], 1);
+			for (n = 0;n < esc.paramCount;n++) {
+				if ((esc.params[n] < NUMMODES) && !vt.mode[esc.params[n]]) {
+					setMode(esc.params[n], 1);
+				}
 			}
 			break;
 		case 'i': // printer 
 			break;
 		case 'l': // reset mode
-			if (( esc.params[0] < NUMMODES) && vt.mode[esc.params[0]]) {
-				setMode(esc.params[0], 0);
+			for (n = 0;n < esc.paramCount;n++) {
+				if ((esc.params[n] < NUMMODES) && vt.mode[esc.params[n]]) {
+					setMode(esc.params[n], 0);
+				}
 			}
 			break;
 		case 'm': // turn on character attributes.  0 = all off 1=bold, 2 = low intensity, 4 = underline 5= blinking 7 = reverse 8 = invisible
