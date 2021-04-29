@@ -66,12 +66,16 @@ void __fastcall__ xepCursorShadow(void)
 void __fastcall__ setXEPLastChar(unsigned char c)
 { // 80 = cr
 	OS.dspflg = 1;
-	OS.rowcrs = XEPLINES-1;
-	OS.colcrs = XEPRMARGIN - 1;
-	xepCursorShadow();
+	if (OS.rowcrs != XEPLINES-1) {
+		OS.rmargn = 255;
+		OS.rowcrs = XEPLINES-1;
+		OS.colcrs = XEPRMARGIN+3;
+		xepCursorShadow();
+		xep.currentXepX = OS.lmargn;
+	}
+
 	callEColonPutByte(c);
-	OS.colcrs = (c == CH_EOL)? OS.lmargn : XEPRMARGIN;
-	xep.currentXepX = OS.colcrs;
+	xep.currentXepX =  (c == CH_EOL)? OS.lmargn : XEPRMARGIN;
 }
 
 void __fastcall__ setXEPCommand(unsigned char c, unsigned char command)
@@ -80,7 +84,7 @@ void __fastcall__ setXEPCommand(unsigned char c, unsigned char command)
 	callEColonSpecial(20, 12, command);
 }
 
-void __fastcall__ setXEPExtraByte(unsigned char c)
+void setXEPExtraByte(unsigned char c)
 {
 	setXEPCommand(c, XEP_SETEXTRABYTE);
 }
@@ -94,7 +98,7 @@ void drawXEPCharAt(unsigned char c, unsigned char x, unsigned char y)
 	callEColonSpecial(20, 12, XEP_WRITEBYTE);
 }
 
-void __fastcall__ setXepRowPtr(unsigned char y, unsigned char val) {
+void setXepRowPtr(unsigned char y, unsigned char val) {
 	setXEPExtraByte(y + 0x20);
 	setXEPLastChar(val);
 	callEColonSpecial(20, 12, XEP_WRITEINTERNALBYTE);
@@ -162,6 +166,7 @@ void deleteCharXep(unsigned char x, unsigned char y)
 	cursorHide();
 	drawXEPCharAt(CH_EOL, XEPRMARGIN, y); // For unknown reasons, this fails when order is reversed.
 	drawXEPCharAt(' ', XEPRMARGIN-1, y);
+	OS.rmargn = XEPRMARGIN;
 	OS.dspflg = 0;
 	OS.rowcrs = y;
 	OS.colcrs = OS.lmargn + x;
@@ -174,6 +179,7 @@ void insertCharXep(unsigned char x, unsigned char y)
 {
 	cursorHide();
 	drawXEPCharAt(CH_EOL, XEPRMARGIN-1, y);
+	OS.rmargn = XEPRMARGIN;
 	OS.dspflg = 0;
 	OS.rowcrs = y;
 	OS.colcrs = OS.lmargn + x;
