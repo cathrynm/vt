@@ -177,6 +177,7 @@ void resetVt(void)
 	for (n = 0;n<NUMMODES;n++)vt.mode[n] = 0;
 	for (n = 0;n<NUMPRIVATE;n++)vt.modeP[n] = 0;
 	vt.extraModeP[0] = 0;
+	vt.modeP[MODEP_DECAWM] = 1;
 	vt.modeP[MODEP_DECANM] = 1; 
 	vt.mode[MODE_SRM] = 1; // Disable local echo
 	vt.modeP[MODEP_SHOWCURSOR] = 1;
