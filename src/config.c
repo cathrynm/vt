@@ -86,7 +86,7 @@ void geturl(int *argc, char ***argv, unsigned char *err)
 		drawString(error);
 		*err = ERR_NONE;
 	}
-	drawString("VT -- by Cathryn Mataga\x9b ");
+	drawString("VT -- (c) Cathryn Mataga\x9b ");
 	drawString(__DATE__);
 	drawString(" ");
 	drawString(__TIME__);
