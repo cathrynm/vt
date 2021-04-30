@@ -1,7 +1,6 @@
 #include "main.h"
 
 #define XEPLINES 25
-#define XEPRMARGIN 81 // Two extra for delete character. 
 #define XEPATR_INVERSE 0x1
 #define XEPATR_BLINK 0x4
 #define XEPATR_DOUBLEWIDE 0x10
@@ -11,6 +10,7 @@
 
 typedef struct {
 	unsigned char origRMargn;
+	unsigned char rMargn;
 	unsigned char xepCharset;
 	unsigned char burst;
 	unsigned char xepX, currentXepX; // xepX, shadow cached value of colcrs, rowcrs in xep80 driver.
@@ -69,7 +69,7 @@ void __fastcall__ setXEPLastChar(unsigned char c)
 	if (OS.rowcrs != XEPLINES-1) {
 		OS.rmargn = 255;
 		OS.rowcrs = XEPLINES-1;
-		OS.colcrs = XEPRMARGIN+3;
+		OS.colcrs = xep.rMargn+3;
 		xepCursorShadow();
 		xep.currentXepX = OS.colcrs;
 	}
@@ -161,9 +161,9 @@ void clearScreenXep(void)
 void deleteCharXep(unsigned char x, unsigned char y)
 {
 	cursorHide();
-	drawXEPCharAt(CH_EOL, XEPRMARGIN, y); // For unknown reasons, this fails when order is reversed.
-	drawXEPCharAt(' ', XEPRMARGIN-1, y);
-	OS.rmargn = XEPRMARGIN;
+	drawXEPCharAt(CH_EOL, xep.rMargn, y); // For unknown reasons, this fails when order is reversed.
+	drawXEPCharAt(' ', xep.rMargn-1, y);
+	OS.rmargn = xep.rMargn;
 	OS.dspflg = 0;
 	OS.rowcrs = y;
 	OS.colcrs = OS.lmargn + x;
@@ -175,8 +175,8 @@ void deleteCharXep(unsigned char x, unsigned char y)
 void insertCharXep(unsigned char x, unsigned char y)
 {
 	cursorHide();
-	drawXEPCharAt(CH_EOL, XEPRMARGIN-1, y);
-	OS.rmargn = XEPRMARGIN;
+	drawXEPCharAt(CH_EOL, xep.rMargn-1, y);
+	OS.rmargn = xep.rMargn;
 	OS.dspflg = 0;
 	OS.rowcrs = y;
 	OS.colcrs = OS.lmargn + x;
@@ -210,6 +210,7 @@ void initXep(void)
 	unsigned char y;
 	xep.burst = 0;
 	xep.origRMargn = OS.rmargn;
+	xep.rMargn = OS.rmargn + 2; // Insert/Delete need two extra characters off the end to put 0x9bs for EOL 
 	setBurstMode(1);
 	setXepCharSet(XEPCH_INTERN);
 	xep.fillFlag = isXep80Internal()? 0x40: (isIntl()? 0x20: 0x00);
@@ -219,8 +220,8 @@ void initXep(void)
 	setXEPXPos(OS.colcrs);
 	OS.rowcrs = 0;
 	setXEPYPos(OS.rowcrs);
-	OS.rmargn = XEPRMARGIN;
-	screenX.screenWidth = XEPRMARGIN - 1;
+	OS.rmargn = xep.rMargn;
+	screenX.screenWidth = xep.origRMargn + 1; 
 	setXEPRMargin(OS.rmargn);
 	callEColonSpecial(20, 12, XEP_CURSORON);
 }
