@@ -51,5 +51,6 @@ void main(int argc, char **argv)
 		screenRestore();
 		closeChio();
 	}
+	OS.brkkey = 0x80; // Turn off break flag
 	closeDetect();
 }

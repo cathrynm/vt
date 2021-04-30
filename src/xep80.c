@@ -155,10 +155,7 @@ void insertLineXep(unsigned char y, unsigned char yBottom)
 
 void clearScreenXep(void)
 {
-	unsigned char y;
 	callEColonSpecial(20, 0xc, isXep80Internal()? XEP_FILLSPACE:XEP_FILLEOL);
-	xep.fillFlag = isXep80Internal()? 0x40: (isIntl()? 0x20: 0x00);
-	for (y = 0;y<XEPLINES;y++)setXepRowPtr(y, xep.fillFlag| y);
 }
 
 void deleteCharXep(unsigned char x, unsigned char y)
@@ -210,20 +207,22 @@ void cursorUpdateXep(unsigned char x, unsigned char y)
 
 void initXep(void)
 {
+	unsigned char y;
 	xep.burst = 0;
 	xep.origRMargn = OS.rmargn;
 	setBurstMode(1);
-	OS.colcrs = 0;
+	setXepCharSet(XEPCH_INTERN);
+	xep.fillFlag = isXep80Internal()? 0x40: (isIntl()? 0x20: 0x00);
+	for (y = 0;y<XEPLINES;y++)setXepRowPtr(y, xep.fillFlag| y);
+	OS.colcrs = OS.lmargn;
+	xep.xepX = OS.colcrs;
 	setXEPXPos(OS.colcrs);
-	OS.rowcrs = OS.lmargn;
+	OS.rowcrs = 0;
 	setXEPYPos(OS.rowcrs);
 	OS.rmargn = XEPRMARGIN;
-	setXEPRMargin(OS.rmargn);
-	xep.xepX = OS.colcrs;
-	xep.currentXepX = xep.xepX;
 	screenX.screenWidth = XEPRMARGIN - 1;
+	setXEPRMargin(OS.rmargn);
 	callEColonSpecial(20, 12, XEP_CURSORON);
-	setXepCharSet(XEPCH_INTERN);
 }
 
 void restoreXep(void)
