@@ -31,7 +31,7 @@ unsigned char isXep80Internal(void) {
 	return (xep.xepCharset == XEPCH_INTERN) && (detect.videoMode == 'X');
 }
 
-void __fastcall__ setXEPXPos(unsigned char hpos) {
+void setXEPXPos(unsigned char hpos) {
 	if (hpos < 80) {
 		callEColonSpecial(20, 12, XEP_SETCURSORHPOS | hpos);
 	} else {
@@ -41,7 +41,7 @@ void __fastcall__ setXEPXPos(unsigned char hpos) {
 	xep.currentXepX = hpos;
 }
 
-void __fastcall__ setXEPYPos(unsigned char y) {
+void setXEPYPos(unsigned char y) {
 	callEColonSpecial(20, 12, XEP_SETCURSORVPOS + y);
 }
 
@@ -98,16 +98,14 @@ void drawXEPCharAt(unsigned char c, unsigned char x, unsigned char y)
 	callEColonSpecial(20, 12, XEP_WRITEBYTE);
 }
 
-void setXepRowPtr(unsigned char y, unsigned char val) {
+void __fastcall__ setXepRowPtr(unsigned char y, unsigned char val) {
 	setXEPExtraByte(y + 0x20);
 	setXEPLastChar(val);
 	callEColonSpecial(20, 12, XEP_WRITEINTERNALBYTE);
 	xep.xepLines[y] = val;
 }
 
-void __fastcall__ setXEPRMargin(unsigned char x) {
-	OS.iocb[0].buffer = eColon;
-	OS.iocb[0].buflen = 2;
+void setXEPRMargin(unsigned char x) {
 	if ((x >= 0x40) && (x < 0x50)) {
 		callEColonSpecial(20, 0xc, XEP_SETRIGHTMARGINLO | (x-0x40));
 	} else {
@@ -161,8 +159,7 @@ void clearScreenXep(void)
 void deleteCharXep(unsigned char x, unsigned char y)
 {
 	cursorHide();
-	drawXEPCharAt(CH_EOL, xep.rMargn, y); // For unknown reasons, this fails when order is reversed.
-	drawXEPCharAt(' ', xep.rMargn-1, y);
+	drawXEPCharAt(CH_EOL, xep.rMargn, y);
 	OS.rmargn = xep.rMargn;
 	OS.dspflg = 0;
 	OS.rowcrs = y;
@@ -170,11 +167,14 @@ void deleteCharXep(unsigned char x, unsigned char y)
 	xepCursorShadow();
 	callEColonPutByte(CH_DELCHR);
 	xep.currentXepX = OS.colcrs;
+	drawXEPCharAt(' ', xep.rMargn - 1, y);
 }
 
 void insertCharXep(unsigned char x, unsigned char y)
 {
 	cursorHide();
+	if (y < SCREENLINES -1)
+		drawXEPCharAt(CH_EOL, xep.rMargn, y);
 	drawXEPCharAt(CH_EOL, xep.rMargn-1, y);
 	OS.rmargn = xep.rMargn;
 	OS.dspflg = 0;
@@ -210,7 +210,7 @@ void initXep(void)
 	unsigned char y;
 	xep.burst = 0;
 	xep.origRMargn = OS.rmargn;
-	xep.rMargn = OS.rmargn + 2; // Insert/Delete need two extra characters off the end to put 0x9bs for EOL 
+	xep.rMargn = OS.rmargn + 1;
 	setBurstMode(1);
 	setXepCharSet(XEPCH_INTERN);
 	xep.fillFlag = isXep80Internal()? 0x40: (isIntl()? 0x20: 0x00);
@@ -221,7 +221,7 @@ void initXep(void)
 	OS.rowcrs = 0;
 	setXEPYPos(OS.rowcrs);
 	OS.rmargn = xep.rMargn;
-	screenX.screenWidth = xep.origRMargn + 1; 
+	screenX.screenWidth = xep.rMargn; 
 	setXEPRMargin(OS.rmargn);
 	callEColonSpecial(20, 12, XEP_CURSORON);
 }
