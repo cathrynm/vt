@@ -66,15 +66,14 @@ void __fastcall__ xepCursorShadow(void)
 void __fastcall__ setXEPLastChar(unsigned char c)
 { // 80 = cr
 	OS.dspflg = 1;
-	if (OS.rowcrs != XEPLINES-1){
+	if ((OS.rowcrs != XEPLINES-1) || (c == CH_EOL)) {
 		OS.rmargn = 255;
 		OS.rowcrs = XEPLINES-1;
 		OS.colcrs = xep.rMargn+3;
 		xepCursorShadow();
 		xep.currentXepX = OS.colcrs;
-
+		if (c == CH_EOL)setXEPYPos(XEPLINES-1); // What exactly is going on with EOL on the last line?  I have no idea really, but this fixes a bug with deleteChar
 	}
-		setXEPYPos(XEPLINES-1);
 	callEColonPutByte(c);
 	xep.currentXepX =  (c == CH_EOL)? OS.lmargn : xep.currentXepX+1;
 }
@@ -160,7 +159,6 @@ void clearScreenXep(void)
 void deleteCharXep(unsigned char x, unsigned char y)
 {
 	cursorHide();
-	if (y == SCREENLINES -1)setXEPYPos(XEPLINES-1); // This works, though trying to understand why
 	drawXEPCharAt(CH_EOL, xep.rMargn, y);
 	OS.rmargn = xep.rMargn;
 	OS.dspflg = 0;
@@ -175,7 +173,6 @@ void deleteCharXep(unsigned char x, unsigned char y)
 void insertCharXep(unsigned char x, unsigned char y)
 {
 	cursorHide();
-	if (y == SCREENLINES -1)setXEPYPos(XEPLINES-1);
 	drawXEPCharAt(CH_EOL, xep.rMargn, y);
 	drawXEPCharAt(CH_EOL, xep.rMargn-1, y);
 	OS.rmargn = xep.rMargn;
