@@ -141,6 +141,7 @@ typedef struct {
     unsigned char MEMAC_BANK_SEL;
     VBXE_REGS *regs;
     unsigned char cursorX, cursorY, cursorOn;
+    unsigned char bios;
 } vbxeStruct;
 
 vbxeStruct vbxe;
@@ -270,8 +271,19 @@ void initPalette(void)
 
 void initVbxe(void)
 {
+    unsigned char err = ERR_NONE;
     unsigned short n;
     unsigned char y;
+    OS.iocb[6].buffer = "S2:";
+    OS.iocb[6].buflen = strlen("S:");
+    OS.iocb[6].command = 96; // VBXE Bios detect
+    OS.iocb[6].aux1 = 0;
+    OS.iocb[6].aux2 = 0;
+    cio(6);
+    iocbErrUpdate(6, &err);
+    vbxe.bios = ((err == ERR_NONE) && (OS.iocb[6].spare == 96));
+
+
     vbxe.regs->MEMAC_CONTROL = (VBXE_BANKTOP >> 8) | 0x8 | (VBXE_BANKSHIFT - 12);       //  0x8 = CPU
     vbxe.regs->MEMAC_BANK_SEL = VBXE_XDLBANK;
     memcpy(VBXE_FONTMEM, (unsigned char*)0xE000, 1024);

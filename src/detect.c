@@ -29,6 +29,8 @@ void initDetect(void)
 	} else if (vbxeTest()) {
 		detect.videoMode = 'V';
 		detect.hasColor = 1;
+	} else if (rawConTest()) {
+		detect.videoMode = 'R';
 	} else if (logMapTrickTest()) {
 		detect.videoMode = 'A'; // This is normal Atari mode, but not direct drawing.  I think everything that does this passes directDrawTest, but maybe someday...
 	} else {

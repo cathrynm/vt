@@ -14,7 +14,7 @@
 
 #define IOCB_SERIAL 3
 typedef struct serialDataStruct serialStruct;
-#define RBUFFERSIZE 0x400
+#define RBUFFERSIZE 0x200
 struct serialDataStruct {
 	unsigned char *buffer;
 	unsigned char baudWordStop, xlat;

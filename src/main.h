@@ -10,6 +10,7 @@
 #include "xep80.h"
 #include "direct.h"
 #include "vbxe.h"
+#include "rawcon.h"
 #include "vt.h"
 #include "chio.h"
 #include "serial.h"

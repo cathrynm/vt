@@ -192,6 +192,9 @@ void drawCharsAt(unsigned char *buffer, unsigned char bufferLen, unsigned char x
 		case 'V':
 			drawCharsAtVbxe(buffer, bufferLen);
 			break;
+		case 'R':
+			drawCharsAtRawCon(buffer, bufferLen);
+			break;
 		default:
 			if (x + bufferLen < screenX.screenWidth) {
 				callEColonPutBytes(buffer, bufferLen);
