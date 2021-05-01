@@ -130,6 +130,7 @@ void drawCharsAtRawCon(unsigned char *buffer, unsigned char bufferLen)
 
 void deleteLineRawCon(unsigned char topY, unsigned char bottomY)
 {
+	cursorHide();
 	if (bottomY > topY) {
 		OS.ziocb.command = 97;
 		OS.ziocb.aux2 = topY;
@@ -154,6 +155,7 @@ void deleteLineRawCon(unsigned char topY, unsigned char bottomY)
 
 void insertLineRawCon(unsigned char topY, unsigned char bottomY)
 {
+	cursorHide();
 	if (bottomY > topY) {
 		OS.ziocb.command = 98;
 		OS.ziocb.aux2 = topY;

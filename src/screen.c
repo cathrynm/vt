@@ -315,7 +315,6 @@ void drawInsertLine(unsigned char y, unsigned char yBottom, unsigned char color)
 			insertLineVbxe(y, yBottom, color);
 			break;
 		case 'R':
-			cursorHide();
 			insertLineRawCon(y, yBottom);
 			break;
 		default:
@@ -349,7 +348,6 @@ void drawDeleteLine(unsigned char y, unsigned char yBottom, unsigned char color)
 			deleteLineVbxe(y, yBottom, color);
 			break;
 		case 'R':
-			cursorHide();
 			deleteLineRawCon(y, yBottom);
 			break;
 		default:
@@ -382,6 +380,12 @@ void drawInsertChar(unsigned char x, unsigned char y, unsigned char color)
 		default:
 			OS.dspflg = 0;
 			OS.rowcrs = y;
+			if (screenX.lineLength[y] >= OS.rmargn + 1) {
+				cursorHide();
+				OS.colcrs = OS.rmargn;
+				callEColonPutByte(CH_DELCHR);
+				screenX.lineLength[y]--;
+			}
 			OS.colcrs = OS.lmargn + x;;
 			callEColonPutByte(CH_INSCHR);
 			break;
