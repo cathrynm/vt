@@ -1,6 +1,6 @@
 
 #include "main.h"
-
+#define ATARIINTERNATIONAL 0
 
 typedef struct chioDataStruct chioStruct;
 struct chioDataStruct {
@@ -56,6 +56,7 @@ void convertLongToVisibleChar(unsigned long c, unsigned char *ch, unsigned char 
 			default:
 				break;
 		}
+#if ATARIINTERNATIONAL
 	} else if (isIntl()) { // international 
 		switch(c) {
 			case 0x1F8B0:
@@ -65,6 +66,7 @@ void convertLongToVisibleChar(unsigned long c, unsigned char *ch, unsigned char 
 			default:
 				break;
 		}
+#endif
 	} else {
 		switch(c) {
 			case 0x1FB87: // someone got these into UTF8 for Atascii, so going to use them
@@ -233,6 +235,7 @@ void convertShortToVisibleChar(unsigned short c, unsigned char *ch, unsigned cha
 	            return;
 			default:break;
 		}
+#if ATARIINTERNATIONAL
 	} else if (isIntl()) { // international 
 		switch(c) {
 			case 0x00a0:
@@ -358,6 +361,7 @@ void convertShortToVisibleChar(unsigned short c, unsigned char *ch, unsigned cha
 			default:
 				break;
 		}
+#endif
 	} else {
 		switch(c) {
 			case 0x00a0:

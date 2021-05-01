@@ -34,7 +34,7 @@ void initDetect(void)
 	} else if (logMapTrickTest()) {
 		detect.videoMode = 'A'; // This is normal Atari mode, but not direct drawing.  I think everything that does this passes directDrawTest, but maybe someday...
 	} else {
-		detect.videoMode = 'S'; // The Spartdos 80 column mode lands here. 
+		detect.videoMode = 'G'; // Generic Atari  
 	}
 	if (detect.videoMode == 'D') {
 		startAddress &= ~0x3ff;
