@@ -119,8 +119,62 @@ unsigned char rawConTest(void)
 
 void drawCharsAtRawCon(unsigned char *buffer, unsigned char bufferLen)
 {
+	if ((screenX.cursX >= OS.colcrs) && (screenX.cursX < OS.colcrs + bufferLen) && (OS.rowcrs == screenX.cursY)) {
+		OS.oldchr = buffer[screenX.cursX - OS.colcrs];
+	}
 	for (;bufferLen--;) {
 		(rawcon.rawTab->putChar)(*buffer++);
 		OS.colcrs++;
 	}
+}
+
+void deleteLineRawCon(unsigned char topY, unsigned char bottomY)
+{
+	if (bottomY > topY) {
+		OS.ziocb.command = 97;
+		OS.ziocb.aux2 = topY;
+		OS.botscr = bottomY + 1;
+		(rawcon.rawTab->xio)();
+		OS.botscr = SCREENLINES;
+		if ((screenX.cursY > topY) && (screenX.cursY <= bottomY)) {
+			OS.colcrs = screenX.cursX;OS.rowcrs = screenX.cursY-1;
+			(rawcon.rawTab->putChar)(OS.oldchr);
+		}
+	}
+
+	OS.ziocb.command = 99;
+	OS.ziocb.aux2 = bottomY;
+	(rawcon.rawTab->xio)();
+	if (bottomY == screenX.cursY)OS.oldchr = ' ';
+	else {
+		OS.colcrs = screenX.cursX;OS.rowcrs = screenX.cursY;
+		OS.oldchr = (rawcon.rawTab->getChar)();
+	}
+}
+
+void insertLineRawCon(unsigned char topY, unsigned char bottomY)
+{
+	if (bottomY > topY) {
+		OS.ziocb.command = 98;
+		OS.ziocb.aux2 = topY;
+		OS.botscr = bottomY + 1;
+		(rawcon.rawTab->xio)();
+		OS.botscr = SCREENLINES;
+		if ((screenX.cursY >= topY) && (screenX.cursY < bottomY)) {
+			OS.colcrs = screenX.cursX;OS.rowcrs = screenX.cursY+1;
+			(rawcon.rawTab->putChar)(OS.oldchr);
+		}
+	}
+	OS.ziocb.command = 99;
+	OS.ziocb.aux2 = topY;
+	(rawcon.rawTab->xio)();
+	if (topY == screenX.cursY)OS.oldchr = ' ';
+	else {
+		OS.colcrs = screenX.cursX;OS.rowcrs = screenX.cursY;
+		OS.oldchr = (rawcon.rawTab->getChar)();
+	}
+}
+
+void initRawCon(void)
+{
 }

@@ -829,6 +829,12 @@ void handleInput(unsigned char *err)
 			sendResponse("\033[P", 3, err);
 			break;
 		}
+		case CH_DELLINE:
+			sendResponse("\033[M", 3, err);
+			break;
+		case CH_INSLINE:
+			sendResponse("\033[L", 3, err);
+			break;
 		case ' ':
 			if ((shift & 0xc0) == 0x80) {
 				sendResponse(&null, 1, err);

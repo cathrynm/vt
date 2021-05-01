@@ -13,7 +13,6 @@ typedef struct {
 	unsigned char buffer[SCREENCOLUMNS*2];
 	void (*eColonSpecial)();
 	unsigned char altScreen;
-	unsigned char cursX, cursY;
 }screenStruct;
 
 screenXStruct screenX;
@@ -86,6 +85,9 @@ void initScreen(void)
 		case 'V':
 			initVbxe();
 			break;
+		case 'R':
+			initRawCon();
+			break;
 		default: {
 			break;
 		}
@@ -150,9 +152,6 @@ void cursorHide(void)
 		case 'V':
 			cursorHideVbxe();
 			break;
-		case 'R':
-			bumpCursor();
-			break;
 		default:
 			break;
 	}
@@ -165,7 +164,7 @@ void cursorUpdate(unsigned char x, unsigned char y)
 		return;
 	}
 	flushBuffer();
-	screen.cursX = x; screen.cursY = y;
+	screenX.cursX = x + OS.lmargn; screenX.cursY = y;
 	if ((OS.crsinh == 0) && (OS.colcrs == x + OS.lmargn) && (OS.rowcrs == y))return;
 	OS.crsinh = 0;
 	OS.colcrs = x + OS.lmargn;
@@ -204,9 +203,6 @@ void drawCharsAt(unsigned char *buffer, unsigned char bufferLen, unsigned char x
 			break;
 		case 'R':
 			drawCharsAtRawCon(buffer, bufferLen);
-			if ((screen.cursX >= x) && (screen.cursX < x + bufferLen) && (y == screen.cursY)) {
-				OS.oldchr = buffer[screen.cursX - x];
-			}
 			break;
 		default:
 			if (x + bufferLen < screenX.screenWidth) {
@@ -318,6 +314,9 @@ void drawInsertLine(unsigned char y, unsigned char yBottom, unsigned char color)
 		case 'V':
 			insertLineVbxe(y, yBottom, color);
 			break;
+		case 'R':
+			insertLineRawCon(y, yBottom);
+			break;
 		default:
 			OS.dspflg = 0;
 			OS.colcrs = OS.lmargn;
@@ -347,6 +346,9 @@ void drawDeleteLine(unsigned char y, unsigned char yBottom, unsigned char color)
 			break;
 		case 'V':
 			deleteLineVbxe(y, yBottom, color);
+			break;
+		case 'R':
+			deleteLineRawCon(y, yBottom);
 			break;
 		default:
 			OS.dspflg = 0;

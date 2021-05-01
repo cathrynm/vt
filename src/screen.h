@@ -8,6 +8,7 @@ typedef struct {
 	unsigned char lineLength[SCREENLINES];
 	unsigned char lineWidth;
 	unsigned short lineTab[SCREENLINES];
+	unsigned char cursX, cursY;
 }screenXStruct;
 
 extern screenXStruct screenX;
