@@ -119,6 +119,7 @@ unsigned char rawConTest(void)
 
 void drawCharsAtRawCon(unsigned char *buffer, unsigned char bufferLen)
 {
+	cursorHide();
 	for (;bufferLen--;) {
 		(rawcon.rawTab->putChar)(*buffer++);
 		OS.colcrs++;

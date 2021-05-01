@@ -154,37 +154,21 @@ void resetTabs(void)
 
 void resetVt(void)
 {
-	unsigned char n;
-	vt.x = 0;
-	vt.y = 0;
-	vt.tMargin = 0;
+	memset(&vt, 0, sizeof(vt));
 	vt.bMargin = VTSCREENLINES - 1;
 	vt.rMargin = 79;
-	vt.attribute = 0;
-	vt.attribute1 = 0;
-	vt.LED = 0;
 	vt.charSet[0] = 'B';
 	vt.charSet[1] = 'B';
 	vt.charSet[2] = 'B';
 	vt.charSet[3] = 'B';
-	vt.charSetPick = 0;
-	vt.keypadAlt = 0;
-	vt.singleShift = 0;
-	vt.lastColumn = 0;
 	vt.color = DEFAULTCOLOR;
 	resetTabs();
-	for (n = 0;n<VTSCREENLINES;n++)vt.lineAttributes[n] = 0;
-	for (n = 0;n<NUMMODES;n++)vt.mode[n] = 0;
-	for (n = 0;n<NUMPRIVATE;n++)vt.modeP[n] = 0;
-	vt.extraModeP[0] = 0;
 	vt.modeP[MODEP_DECAWM] = 1;
 	vt.modeP[MODEP_DECANM] = 1; 
 	vt.mode[MODE_SRM] = 1; // Disable local echo
 	vt.modeP[MODEP_SHOWCURSOR] = 1;
-	vt.specialFlags = 0; // SPECIALFLAG_LFWITHCR; // APE needs this?  Why
 	cursorSave();
 	clearScreen(2);
-
 }
 
 void fixCursor(void)

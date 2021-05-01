@@ -141,6 +141,9 @@ void cursorHide(void)
 		case 'V':
 			cursorHideVbxe();
 			break;
+		case 'R':
+			callEColonPutByte(CH_CURS_LEFT);
+			break;
 		default:
 			break;
 	}
