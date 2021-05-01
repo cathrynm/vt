@@ -1,21 +1,38 @@
 
 #include "main.h"
 
-#define BAUDSTRLEN 16
-#define URLLEN 254
 #define MAXARGV 8
-#define USERPASSLEN 120
+#define MAXLEN 255
 typedef struct {
 	char *argv[MAXARGV];
-	unsigned char url[URLLEN+1];
-	unsigned char baud[BAUDSTRLEN + 4];
-	unsigned char user[USERPASSLEN+4];
-	unsigned char passwd[USERPASSLEN+4];
+	unsigned char *url; // [URLLEN+1];
+	unsigned char *baud; // [BAUDSTRLEN + 4];
+	unsigned char *user; // [USERPASSLEN+4];
+	unsigned char *passwd; // [USERPASSLEN+4];
 	openIoStruct openIo;
 } configStruct;
 
-configStruct configData;
+configStruct configData = {0};
 
+void freeConfig(void)
+{
+	if (configData.url) {
+		free(configData.url);
+		configData.url = NULL;
+	}
+	if (configData.baud) {
+		free(configData.baud);
+		configData.baud = NULL;
+	}
+	if (configData.user) {
+		free(configData.user);
+		configData.user = NULL;
+	}
+	if (configData.passwd) {
+		free(configData.passwd);
+		configData.passwd = NULL;
+	}
+}
 
 void crToZero(unsigned char *s, unsigned char len)
 {
@@ -25,12 +42,12 @@ void crToZero(unsigned char *s, unsigned char len)
 	*s = 0;
 }
 
-unsigned char sanitizeUrl(unsigned char *s, unsigned char len)
+unsigned char sanitizeUrl(unsigned char *s)
 {
 	unsigned char n, m;
 	unsigned char foundColon = 0, foundDevice = 0;
 	s[0] = toupper(s[0]);
-	for (m = 0, n = 0;n < len;n++) {
+	for (m = 0, n = 0;s[n];n++) {
 		if (s[n] == 0x9b) break;
 		if (isspace(s[n]))continue;
 		if (s[n] == ':') {
@@ -46,12 +63,12 @@ unsigned char sanitizeUrl(unsigned char *s, unsigned char len)
 	return foundColon && foundDevice;
 }
 
-unsigned char sanitizeBaud(unsigned char *s, unsigned char len)
+unsigned char sanitizeBaud(unsigned char *s)
 {
 	unsigned char n, m;
 	unsigned char foundColon = 0;
 	s[0] = toupper(s[0]);
-	for (m = 0, n = 0;n< len;n++) {
+	for (m = 0, n = 0;s[n];n++) {
 		if (s[n] == 0x9b) break;
 		if (isspace(s[n]))continue;
 		if (!isdigit(s[n]) && (s[n] != '.'))return 0;
@@ -72,12 +89,43 @@ unsigned char urlIsType(unsigned char *s, unsigned char *typ) {
 	return 1;
 }
 
+
+unsigned char *parseParam(unsigned char *prompt, unsigned char p, unsigned char *err)
+{
+	unsigned char *param = malloc(MAXLEN);
+	unsigned char pLen = p?3:0, len;
+	if (!param) {
+		*err = ERR_OUTOFMEMORY;
+		freeConfig();
+		return NULL;
+	}
+	drawString(prompt);
+	len = getline(&param[pLen], MAXLEN - pLen - 1, err);
+	if (*err != ERR_NONE) {
+		free(param);
+		freeConfig();
+		return NULL;
+	}
+	if (len > 1) {
+		crToZero(&param[pLen], len);
+		if (p) {
+			param[0] = '/';
+			param[1] = p;
+			param[2] = '=';
+		}
+		return realloc(param, strlen(param) + 1);
+	} else {
+		free(param);
+		return NULL;
+	}
+}
+
 void geturl(int *argc, char ***argv, unsigned char *err)
 {
 	static unsigned char error[] = "ERROR: 000\x9b";
 	unsigned char baud;
 	unsigned char dev;
-	unsigned char len;
+	freeConfig();
 	*argc = 0;
 	*argv = &configData.argv[0];
 	drawChar(clearScreenChar);
@@ -90,55 +138,34 @@ void geturl(int *argc, char ***argv, unsigned char *err)
 	drawString(__DATE__);
 	drawString(" ");
 	drawString(__TIME__);
-	drawString("\x9b");
-	drawString(" BREAK to quit\x9b");
+	drawString("\x9b BREAK to quit\x9b");
 	do {
-		drawString(" R: or N:ssh://[fqdn]\x9b");
-		drawString(" URL:");
-		len = getline(configData.url,URLLEN, err);
-		if (*err != ERR_NONE)return;
-		if (!sanitizeUrl(configData.url, len))continue;
+		if (configData.url)free(configData.url);
+		configData.url = parseParam(" R: or N:ssh://[fqdn]\x9b URL:", 0, err);
+		if (*err != ERR_NONE) return;
+		if (!configData.url || !sanitizeUrl(configData.url))continue;
 		dev = configData.url[0];
 	}while((dev != 'N') && (dev != 'R'));
 	*argc = 1;
-
 	configData.argv[(*argc)++] = configData.url;
 
 	if (dev == 'R') {
 		do {
-			drawString(" 300,1200,2400,4800,9600,19200\x9b");
-			drawString(" BAUD:");
-			len = getline(&configData.baud[3], BAUDSTRLEN, err);
-			if (*err != ERR_NONE)return;
-			if (!sanitizeBaud(&configData.baud[3], len)) baud = BAUD_NONE;
-			else baud = stringToBaud(&configData.baud[3]);
+			if (configData.baud)free(configData.baud);
+			configData.baud = parseParam(" 300,1200,2400,4800,9600,19200\x9b BAUD:", 'B', err);
+			if (*err != ERR_NONE) return;
+			if (!configData.baud || !sanitizeBaud(&configData.baud[3]))continue;
+			baud = stringToBaud(&configData.baud[3]);
 		}while(baud == BAUD_NONE);
-		configData.baud[0] = '/';
-		configData.baud[1] = 'B';
-		configData.baud[2] = '=';
 		configData.argv[(*argc)++] = configData.baud;
 	} else if (dev == 'N') {
 		if (urlIsType(configData.url, "ssh://")) {
-			drawString(" USERNAME:");
-			len = getline(&configData.user[3], USERPASSLEN, err);
-			if (*err != ERR_NONE)return;
-			if (len > 1) {
-				crToZero(&configData.user[3], len);
-				configData.user[0] = '/';
-				configData.user[1] = 'U';
-				configData.user[2] = '=';
-				configData.argv[(*argc)++] = configData.user;
-			}
-			drawString(" PASSWORD:");
-			len = getline(&configData.passwd[3], USERPASSLEN, err);
-			if (*err != ERR_NONE)return;
-			if (len > 1) {
-				crToZero(&configData.passwd[3], len);
-				configData.passwd[0] = '/';
-				configData.passwd[1] = 'P';
-				configData.passwd[2] = '=';
-				configData.argv[(*argc)++] = configData.passwd;
-			}
+			configData.user = parseParam(" USERNAME:", 'U', err);
+			if (*err != ERR_NONE) return;
+			if (configData.user)configData.argv[(*argc)++] = configData.user;
+			configData.passwd = parseParam(" PASSWORD:", 'P', err);
+			if (*err != ERR_NONE) return;
+			if (configData.passwd)configData.argv[(*argc)++] = configData.passwd;
 		}
 	}
 }
