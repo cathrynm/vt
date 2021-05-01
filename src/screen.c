@@ -13,6 +13,7 @@ typedef struct {
 	unsigned char buffer[SCREENCOLUMNS*2];
 	void (*eColonSpecial)();
 	unsigned char altScreen;
+	unsigned char cursX, cursY;
 }screenStruct;
 
 screenXStruct screenX;
@@ -133,6 +134,14 @@ void drawClearScreen(unsigned char color)
 	for (y = 0;y< 24;y++) screenX.lineLength[y] = 0;
 }
 
+void bumpCursor(void)
+{
+	if (OS.colcrs < OS.rmargn)OS.colcrs++;
+	else OS.colcrs = OS.lmargn;
+	OS.dspflg = 0;
+	callEColonPutByte(CH_CURS_LEFT);
+}
+
 void cursorHide(void)
 {
 	if (OS.crsinh) return;
@@ -142,7 +151,7 @@ void cursorHide(void)
 			cursorHideVbxe();
 			break;
 		case 'R':
-			callEColonPutByte(CH_CURS_LEFT);
+			bumpCursor();
 			break;
 		default:
 			break;
@@ -156,6 +165,7 @@ void cursorUpdate(unsigned char x, unsigned char y)
 		return;
 	}
 	flushBuffer();
+	screen.cursX = x; screen.cursY = y;
 	if ((OS.crsinh == 0) && (OS.colcrs == x + OS.lmargn) && (OS.rowcrs == y))return;
 	OS.crsinh = 0;
 	OS.colcrs = x + OS.lmargn;
@@ -167,11 +177,8 @@ void cursorUpdate(unsigned char x, unsigned char y)
 			cursorUpdateVbxe(x, y);
 			break;
 		default:
-			if (OS.colcrs < OS.rmargn)OS.colcrs++;
-			else OS.colcrs = OS.lmargn;
 			OS.rowcrs = y;
-			OS.dspflg = 0;
-			callEColonPutByte(CH_CURS_LEFT);
+			bumpCursor();
 			break;
 	}
 }
@@ -197,6 +204,9 @@ void drawCharsAt(unsigned char *buffer, unsigned char bufferLen, unsigned char x
 			break;
 		case 'R':
 			drawCharsAtRawCon(buffer, bufferLen);
+			if ((screen.cursX >= x) && (screen.cursX < x + bufferLen) && (y == screen.cursY)) {
+				OS.oldchr = buffer[screen.cursX - x];
+			}
 			break;
 		default:
 			if (x + bufferLen < screenX.screenWidth) {

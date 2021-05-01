@@ -1030,7 +1030,6 @@ void debugVt(unsigned char c)
 void displayUtf8Char(unsigned char c, unsigned char attribute)
 {
 	debugVt(c);
-	cursorHide();
 	addChar(c, vt.attribute ^ attribute, vt.attribute1, vt.color);
 	esc.commandIndex = 0;
 }
@@ -1042,7 +1041,6 @@ void processChar(unsigned char c, unsigned char *err) {
 	unsigned char ch, attrib;
 	unsigned short paramVal;
 	debugVt(c);
-	cursorHide();
 	if (c < VT_SPACE)switch(c) {
 		case VT_BEL:
 			if (esc.commandIndex && esc.secondChar == ']') {
