@@ -315,6 +315,7 @@ void drawInsertLine(unsigned char y, unsigned char yBottom, unsigned char color)
 			insertLineVbxe(y, yBottom, color);
 			break;
 		case 'R':
+			cursorHide();
 			insertLineRawCon(y, yBottom);
 			break;
 		default:
@@ -348,6 +349,7 @@ void drawDeleteLine(unsigned char y, unsigned char yBottom, unsigned char color)
 			deleteLineVbxe(y, yBottom, color);
 			break;
 		case 'R':
+			cursorHide();
 			deleteLineRawCon(y, yBottom);
 			break;
 		default:
