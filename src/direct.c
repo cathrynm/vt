@@ -79,10 +79,10 @@ unsigned char directDrawTest(void)
 	callEColonPutBytes((unsigned char *)drawTest, 4);
 	scrnPtr = OS.sdlst;
 	scrnPtr += 32;
-	if (scrnPtr[0] + 32 != '0')return 0;
+	if (scrnPtr[0 + OS.lmargn] + 32 != '0')return 0;
 
 	for (n = 1;n < 255;n++) {
-		if (scrnPtr[n]  + 32 == '1') {
+		if (scrnPtr[n + OS.lmargn]  + 32 == '1') {
 			for (y = 0;y< SCREENLINES;y++) {
 				screenX.lineTab[y] = (unsigned short) y * (unsigned short) n;
 			}

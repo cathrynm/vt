@@ -2,6 +2,11 @@
 	.export _trip
 	.export _jfsymbol
 	.export _jfsymbol_memoryIndex
+	.import SP_save
+	.export _SHFLOK_save
+	.export _LMARGN_save
+_SHFLOK_save = SP_save+1
+_LMARGN_save = SP_save+2
 _ih:	LDA #$01
 	STA _trip
 	PLA

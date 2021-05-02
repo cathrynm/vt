@@ -1,12 +1,5 @@
 #include "main.h"
 
-#define crt0 _BSS_LOAD__ // wretched hack, but whatever.
-extern struct {
-	unsigned char SP_save;
-	unsigned char SHFLOK_save; // dependent on crt0.s. For uknown reason cc65 monkeys with these.
-	unsigned char LMARGN_save;
-} crt0;
-
 
 openIoStruct openIo;
 
@@ -16,8 +9,8 @@ void main(int argc, char **argv)
 	unsigned char *device;
 	unsigned char err = ERR_NONE;
 	OS.appmhi = OS.memtop;
-	OS.shflok = crt0.SHFLOK_save;
-	OS.lmargn = crt0.LMARGN_save;
+	OS.shflok = SHFLOK_save;
+	OS.lmargn = 0; //  LMARGN_save;
 	for (n= 0;n<argc;n++) crToZero(argv[n], strlen(argv[n]));
 	initDetect();
 	if (!detect.videoMode) {
