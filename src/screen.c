@@ -375,7 +375,7 @@ void drawInsertChar(unsigned char x, unsigned char y, unsigned char color)
 			insertCharXep(x, y);
 			break;
 		case 'V':
-			insertCharVbxe(x, y, screenX.lineLength[y] - x, color);
+			insertCharVbxe(x, y, color);
 			break;
 		default:
 			OS.dspflg = 0;
@@ -384,13 +384,12 @@ void drawInsertChar(unsigned char x, unsigned char y, unsigned char color)
 				cursorHide();
 				OS.colcrs = OS.rmargn;
 				callEColonPutByte(CH_DELCHR);
-				screenX.lineLength[y]--;
 			}
 			OS.colcrs = OS.lmargn + x;;
 			callEColonPutByte(CH_INSCHR);
 			break;
 	}
-	screenX.lineLength[y]++;
+	if (screenX.lineLength[y] < screenX.screenWidth)screenX.lineLength[y]++;
 }
 
 void drawDeleteChar(unsigned char x, unsigned char y, unsigned char color)
