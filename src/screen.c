@@ -181,6 +181,11 @@ void cursorHide(void)
 			cursorHideVbxe();
 			break;
 #endif
+#if RAWCON_ON
+		case 'R':
+			bumpCursor();
+			break;
+#endif
 		default:
 			break;
 	}
@@ -188,7 +193,7 @@ void cursorHide(void)
 
 void cursorUpdate(unsigned char x, unsigned char y)
 {
-	if (x >= screenX.screenWidth || y >= SCREENLINES) {
+	if (x >= screenX.screenWidth - OS.lmargn || y >= SCREENLINES) {
 		cursorHide();
 		return;
 	}
