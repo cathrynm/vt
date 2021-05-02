@@ -434,24 +434,24 @@ void drawDeleteLine(unsigned char y, unsigned char yBottom, unsigned char color)
 
 void drawInsertChar(unsigned char x, unsigned char y, unsigned char color)
 {
-	if (x >= screenX.lineLength[y])return;
 	flushBuffer();
+	if (x >= screenX.lineLength[y])return;
 	switch(detect.videoMode) {
 #if XEP_ON
 		case 'X':
-			insertCharXep(x, y);
+			insertCharXep(x + OS.lmargn, y);
 			break;
 #endif
 #if VBXE_ON
 		case 'V':
-			insertCharVbxe(x, y, color);
+			insertCharVbxe(x + OS.lmargn, y, color);
 			break;
 #endif
 #if CIO_ON || DIRECT_ON || RAWCON_ON
 		default:
 			OS.dspflg = 0;
 			OS.rowcrs = y;
-			if (screenX.lineLength[y] >= OS.rmargn + 1) {
+			if (screenX.lineLength[y] > OS.rmargn - OS.lmargn) {
 				cursorHide();
 				OS.colcrs = OS.rmargn;
 				callEColonPutByte(CH_DELCHR);
@@ -461,22 +461,22 @@ void drawInsertChar(unsigned char x, unsigned char y, unsigned char color)
 			break;
 #endif
 	}
-	if (screenX.lineLength[y] < screenX.screenWidth)screenX.lineLength[y]++;
+	if (screenX.lineLength[y] < screenX.screenWidth - OS.lmargn)screenX.lineLength[y]++;
 }
 
 void drawDeleteChar(unsigned char x, unsigned char y, unsigned char color)
 {
-	if (x >= screenX.lineLength[y])return;
 	flushBuffer();
+	if (x >= screenX.lineLength[y])return;
 	switch(detect.videoMode) {
 #if XEP_ON
 		case 'X':
-			deleteCharXep(x, y);
+			deleteCharXep(x + OS.lmargn, y);
 			break;
 #endif
 #if VBXE_ON
 		case 'V':
-			deleteCharVbxe(x, y, screenX.lineLength[y] - x, color);
+			deleteCharVbxe(x + OS.lmargn, y, screenX.lineLength[y] - x, color);
 			break;
 #endif
 #if CIO_ON || DIRECT_ON || RAWCON_ON

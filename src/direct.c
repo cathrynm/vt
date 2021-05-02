@@ -29,44 +29,45 @@ void deleteLineDirect(unsigned char topY, unsigned char bottomY)
 	unsigned char *p, *pStart, *pEnd, *pBottom;
 	pStart = OS.savmsc + screenX.lineTab[topY] + OS.lmargn;
 	pBottom =  OS.savmsc + screenX.lineTab[bottomY] + OS.lmargn;
-	pEnd = pBottom + screenX.screenWidth - OS.lmargn;
-	if (((unsigned short) OS.oldadr >= (unsigned short) pStart)  && 
-		 ((unsigned short) OS.oldadr < (unsigned short) pEnd)) {
-		pStart[(unsigned short)OS.oldadr - (unsigned short)pStart] = OS.oldchr;
+	pEnd = pBottom + OS.rmargn - OS.lmargn;
+	if (((unsigned short) OS.oldadr >= (unsigned short) pStart)  && ((unsigned short) OS.oldadr <= (unsigned short) pEnd)) {
+		cursorHide();
+		*OS.oldadr = OS.oldchr;
 	}
 	if (bottomY > topY) {
 		p = pStart;
-		for (y = topY;y+1 <= bottomY;y++, p += screenX.screenWidth) {
+		for (y = topY;y+1 <= bottomY;y++, p += direct.lineWidth) {
 			len = (screenX.lineLength[y] > screenX.lineLength[y+1])? screenX.lineLength[y]: screenX.lineLength[y+1];
-			if (len > 0)memcpy(p, &p[screenX.screenWidth], len);
+			if (len > 0)memcpy(p, &p[direct.lineWidth], len);
 		}
 	}
 	if (screenX.lineLength[bottomY] > 0)
 		memset(pBottom, 0, screenX.lineLength[bottomY]);
-	if (((unsigned short) OS.oldadr >= (unsigned short) pStart)  && 
-		 ((unsigned short) OS.oldadr < (unsigned short) pEnd)) {
-		OS.oldchr = pStart[(unsigned short)OS.oldadr - (unsigned short)pStart];
-	}
+	if (((unsigned short) OS.oldadr >= (unsigned short) pStart) && ((unsigned short) OS.oldadr <= (unsigned short) pEnd))
+		OS.oldchr = *OS.oldadr;
 }
 
 void insertLineDirect(unsigned char topY, unsigned char bottomY)
 {
-	unsigned char *pStart, *pEnd;
+	unsigned char *pStart, *pEnd, *p;
+	unsigned char y, len;
 	pStart = OS.savmsc + screenX.lineTab[topY] + OS.lmargn;
-	pEnd =  OS.savmsc + screenX.lineTab[bottomY] + screenX.screenWidth;
-	if (((unsigned short) OS.oldadr >= (unsigned short) pStart)  && 
-		 ((unsigned short) OS.oldadr < (unsigned short) pEnd)) {
-		pStart[(unsigned short)OS.oldadr - (unsigned short)pStart] = OS.oldchr;
+	pEnd =  OS.savmsc + screenX.lineTab[bottomY] + OS.rmargn;
+	if (((unsigned short) OS.oldadr >= (unsigned short) pStart) && ((unsigned short) OS.oldadr <= (unsigned short) pEnd)) {
+		cursorHide();
+		*OS.oldadr = OS.oldchr;
 	}
 	if (bottomY > topY) {
-		 memmove(&pStart[screenX.screenWidth], pStart, screenX.lineTab[bottomY - topY]);
+		p = OS.savmsc + screenX.lineTab[bottomY - 1] + OS.lmargn;
+		for (y = bottomY-1;y >= topY;y--, p -= direct.lineWidth) {
+			len = (screenX.lineLength[y] > screenX.lineLength[y+1])? screenX.lineLength[y]: screenX.lineLength[y+1];
+			if (len > 0)memcpy(&p[direct.lineWidth], p, len);
+		}
 	}
 	if (screenX.lineLength[topY] > 0)
 		memset(pStart, 0, screenX.lineLength[topY]);
-	if (((unsigned short) OS.oldadr >= (unsigned short) pStart)  && 
-		 ((unsigned short) OS.oldadr < (unsigned short) pEnd)) {
-		OS.oldchr = pStart[(unsigned short)OS.oldadr - (unsigned short)pStart];
-	}
+	if (((unsigned short) OS.oldadr >= (unsigned short) pStart) &&((unsigned short) OS.oldadr <= (unsigned short) pEnd))
+		OS.oldchr = *OS.oldadr;
 }
 
 unsigned char directDrawTest(void)
