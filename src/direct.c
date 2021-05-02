@@ -27,15 +27,14 @@ void deleteLineDirect(unsigned char topY, unsigned char bottomY)
 {
 	unsigned char y, len;
 	unsigned char *p, *pStart, *pEnd, *pBottom;
-	pStart = OS.savmsc + screenX.lineTab[topY];
-	pBottom =  OS.savmsc + screenX.lineTab[bottomY];
-	pEnd = pBottom + screenX.screenWidth;
+	pStart = OS.savmsc + screenX.lineTab[topY] + OS.lmargn;
+	pBottom =  OS.savmsc + screenX.lineTab[bottomY] + OS.lmargn;
+	pEnd = pBottom + screenX.screenWidth - OS.lmargn;
 	if (((unsigned short) OS.oldadr >= (unsigned short) pStart)  && 
 		 ((unsigned short) OS.oldadr < (unsigned short) pEnd)) {
 		pStart[(unsigned short)OS.oldadr - (unsigned short)pStart] = OS.oldchr;
 	}
 	if (bottomY > topY) {
-		// memmove(pStart, &pStart[screenX.screenWidth], screenX.lineTab[bottomY - topY]);
 		p = pStart;
 		for (y = topY;y+1 <= bottomY;y++, p += screenX.screenWidth) {
 			len = (screenX.lineLength[y] > screenX.lineLength[y+1])? screenX.lineLength[y]: screenX.lineLength[y+1];
@@ -53,7 +52,7 @@ void deleteLineDirect(unsigned char topY, unsigned char bottomY)
 void insertLineDirect(unsigned char topY, unsigned char bottomY)
 {
 	unsigned char *pStart, *pEnd;
-	pStart = OS.savmsc + screenX.lineTab[topY];
+	pStart = OS.savmsc + screenX.lineTab[topY] + OS.lmargn;
 	pEnd =  OS.savmsc + screenX.lineTab[bottomY] + screenX.screenWidth;
 	if (((unsigned short) OS.oldadr >= (unsigned short) pStart)  && 
 		 ((unsigned short) OS.oldadr < (unsigned short) pEnd)) {

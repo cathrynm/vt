@@ -12,7 +12,7 @@
 #endif
 
 typedef struct {
-	unsigned char bufferLen, bufferX, bufferY;
+	unsigned char bufferLen, bufferX, bufferY, bufferLineLen;
 	unsigned char clearBuffer[SCREENCOLUMNS*ATTRIBS];
 	unsigned char buffer[SCREENCOLUMNS*ATTRIBS];
 	void (*eColonSpecial)();
@@ -72,6 +72,7 @@ void initScreen(void)
 	}
 	screenX.screenWidth = OS.rmargn + 1; 
 	screen.bufferLen = 0;
+	screen.bufferLineLen = 0;
 	screen.bufferX = 255;
 	screen.bufferY = 0;
 	screen.altScreen = 0;
@@ -287,23 +288,23 @@ void drawCharsAt(unsigned char *buffer, unsigned char bufferLen, unsigned char x
 	}
 }
 
-
 void flushBuffer(void)
 {
 	if (!screen.bufferLen)return;
 	cursorHide();
 	drawCharsAt(screen.buffer, screen.bufferLen, OS.lmargn + screen.bufferX - screen.bufferLen, screen.bufferY);
 	screen.bufferLen = 0;
+	screenX.lineLength[screen.bufferY] = screen.bufferLineLen;
 }
 
 void drawCharAt(unsigned char c, unsigned char attribute, unsigned char color, unsigned char x, unsigned char y)
 {
-	if ((y >= SCREENLINES) || (x >= screenX.screenWidth))return;
-	if (c == 0x9b)return;
-	if (y != screen.bufferY || x != screen.bufferX) flushBuffer();
+	if ((y >= SCREENLINES) || (x >= screenX.screenWidth - OS.lmargn) || (c == CH_EOL))return;
+	if (y != screen.bufferY || x != screen.bufferX || (screen.bufferLen >= SCREENCOLUMNS)) flushBuffer();
 	if (!screen.bufferLen) {
 		screen.bufferX = x;
 		screen.bufferY = y;
+		screen.bufferLineLen = screenX.lineLength[y];
 	}
 	if (!detect.hasColor) {
 		screen.buffer[screen.bufferLen] = c ^(attribute & 0x80);
@@ -313,34 +314,30 @@ void drawCharAt(unsigned char c, unsigned char attribute, unsigned char color, u
 	}
 	screen.bufferLen++;
 	screen.bufferX++;
-	if ((c != ' ') && (screen.bufferX > screenX.lineLength[screen.bufferY]))
-		screenX.lineLength[screen.bufferY] = screen.bufferX;
-}
-
-void drawColorClearCharsAt(unsigned char len, unsigned char x, unsigned char y, unsigned char color) {
-	for (;len--;)drawCharAt(' ', 0, color, x++, y);
+	if (((c != ' ') || color) && (screen.bufferX > screen.bufferLineLen))
+		screen.bufferLineLen = screen.bufferX;
 }
 
 void drawClearCharsAt(unsigned char len, unsigned char x, unsigned char y, unsigned char color)
 {
-	unsigned char oldLen;
-	if ((y >= SCREENLINES) || (x >= screenX.screenWidth))return;
+	unsigned char lineLength;
+	if ((y >= SCREENLINES) || (x >= screenX.screenWidth - OS.lmargn))return;
 	if (!detect.hasColor)color = 0;
-
+	if (x + len > screenX.screenWidth - OS.lmargn)len = screenX.screenWidth - OS.lmargn - x;
 	if (color) {
-		drawColorClearCharsAt(len, x, y, color);
+		for (;len--;)drawCharAt(' ', 0, color, x++, y);
 		return;
 	}
-	if (x >= screenX.lineLength[y])return;
-	cursorHide();
 	flushBuffer();
-	oldLen = screenX.lineLength[y];
-	if (len >= screenX.screenWidth - x) {
-		len = screenX.screenWidth - x;
-		if (x < screenX.lineLength[y])screenX.lineLength[y] = x;
+	lineLength = screenX.lineLength[y];
+	if (x >= lineLength)return;
+	cursorHide();
+	if (len >= lineLength - x) { // Clear to end of line.
+		len = lineLength - x;
+		lineLength = x;
 	}
-	if (len > oldLen - x) len = oldLen - x;
 	drawCharsAt(screen.clearBuffer, len, x + OS.lmargn, y);
+	screenX.lineLength[y] = lineLength; // UPdate this here, in case lower level draw code needs original line length
 }
 
 void drawClearLine(unsigned char y, unsigned char color)

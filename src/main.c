@@ -10,7 +10,7 @@ void main(int argc, char **argv)
 	unsigned char err = ERR_NONE;
 	OS.appmhi = OS.memtop;
 	OS.shflok = SHFLOK_save;
-	OS.lmargn = 0; //  LMARGN_save;
+	OS.lmargn = LMARGN_save;
 	for (n= 0;n<argc;n++) crToZero(argv[n], strlen(argv[n]));
 	initDetect();
 	if (!detect.videoMode) {

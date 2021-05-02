@@ -222,7 +222,7 @@ void initXep(void)
 	OS.rowcrs = 0;
 	setXEPYPos(OS.rowcrs);
 	OS.rmargn = xep.rMargn;
-	screenX.screenWidth = xep.rMargn; 
+	screenX.screenWidth = xep.rMargn - OS.lmargn; 
 	setXEPRMargin(OS.rmargn);
 	callEColonSpecial(20, 12, XEP_CURSORON);
 }
