@@ -224,7 +224,6 @@ void initBlit(void)
     blitter->dest_adr2 = 0;
     blitter->dest_step_y_0 = 0;
     blitter->dest_step_y_1 = 0;
-    blitter->dest_step_x = 1;
     blitter->blt_width = 0;
     blitter->blt_height = 0; 
     blitter->blt_and_mask = 0xff;
@@ -240,11 +239,19 @@ void blit(unsigned short dest, unsigned short source, unsigned char wid, unsigne
     blitterStruct *blitter = VBXE_BLITMEM;
     while (vbxe.regs->BLITTER_BUSY);
     vbxe.regs->MEMAC_BANK_SEL = VBXE_BLITBANK;
+    blitter->source_adr2 = 0;
+    blitter->pattern_feature = 0;
+    blitter->dest_adr2 = 0;
+    blitter->blt_xor_mask = 0;
+    blitter->blt_control = 0; // Next = 0 Mode = 0 (Copy)
+    blitter->blt_zoom = 0;
+    blitter->dest_step_x = rev? -1: 1;
+    blitter->source_step_x = rev? -1:1;
     blitter->source_adr = source;
     blitter->source_step_y = (rev? -wid: wid) << 1;
     blitter->dest_adr = dest;
     blitter->dest_step_y = blitter->source_step_y;
-    blitter->blt_width = wid << 1;
+    blitter->blt_width = (wid << 1) - 1;
     blitter->blt_height = hi - 1;
     blitter->blt_and_mask = (source != 0)? 0xff: 0;
     vbxe.regs->BLITTER_START = 1;
@@ -377,8 +384,9 @@ void drawCharsAtVbxe(unsigned char *s, unsigned char len)
 
 void insertLineVbxe(unsigned char y, unsigned char yBottom, unsigned char color)
 {
+    cursorHideVbxe();
     if (y < yBottom) {
-        blit(VBXE_SCREENADDR + screenX.lineTab[yBottom], VBXE_SCREENADDR + screenX.lineTab[yBottom - 1], VBXE_WIDTH, yBottom - y, 1);
+        blit(VBXE_SCREENADDR + screenX.lineTab[yBottom] + VBXE_WIDTH*2-1, VBXE_SCREENADDR + screenX.lineTab[yBottom - 1] + VBXE_WIDTH*2-1, VBXE_WIDTH, yBottom - y, 1);
     }
     if (color) {
         drawClearLine(y, color);
@@ -387,6 +395,7 @@ void insertLineVbxe(unsigned char y, unsigned char yBottom, unsigned char color)
 
 void deleteLineVbxe(unsigned char y, unsigned char yBottom, unsigned char color)
 {
+    cursorHideVbxe();
     if (y < yBottom) {
         blit(VBXE_SCREENADDR + screenX.lineTab[y], VBXE_SCREENADDR + screenX.lineTab[y+1], VBXE_WIDTH, yBottom - y, 0);
     }
@@ -419,5 +428,3 @@ void deleteCharVbxe(unsigned char x, unsigned char y, unsigned char len, unsigne
     *pStart = color;
     vbxe.regs->MEMAC_BANK_SEL = 0;
 }
-
-// Try attrib 0x23 and 0xf
