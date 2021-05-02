@@ -219,7 +219,10 @@ void cursorUpdate(unsigned char x, unsigned char y)
 
 void drawCharsAt(unsigned char *buffer, unsigned char bufferLen, unsigned char x, unsigned char y)
 {
-	unsigned char logMapTouch = 0, xp;
+	unsigned char logMapTouch = 0;
+#if CIO_ON
+	unsigned char xp;
+#endif
 	if ((x >= screenX.screenWidth) || !bufferLen)return;
 	if (x + bufferLen > screenX.screenWidth)bufferLen = screenX.screenWidth - x;
 	OS.dspflg = 1;

@@ -17,7 +17,7 @@ unsigned char logMapTrickTest(void)
 
 void initDetect(void)
 {
-	unsigned short startAddress = (unsigned short)_STARTADDRESS__; // Start the program on 0x400 boundary.  So 0x400 below is good
+	unsigned short startAddress = (unsigned short)&_STARTADDRESS__; // Start the program on 0x400 boundary.  So 0x400 below is good
 	detect.osType = get_ostype() & AT_OS_TYPE_MAIN;
 	detect.chbas = OS.chbas;
 	detect.fullChbas = 0;
@@ -51,7 +51,6 @@ void initDetect(void)
 
 #if DIRECT_ON
 	if (detect.videoMode == 'D') {
-		startAddress &= ~0x3ff;
 		if (((unsigned short) OS.memlo + 0x400 <= startAddress)  && !(startAddress & 0x3ff)) {
 			startAddress -= 0x400;
 			detect.fullChbas = startAddress >> 8;
