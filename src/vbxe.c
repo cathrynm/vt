@@ -4,7 +4,6 @@
 
 #define VBXE_WIDTH 80
 #define VBXE_HEIGHT 24
-#define VBXE_BANKTOP 0x4000
 
 #define VBXE_BANKSHIFT 12
 #define VBXE_BANKSIZE (1<<VBXE_BANKSHIFT) // 0x1000
@@ -13,22 +12,22 @@
 #define VBXE_XDLADDR 0x0000
 #define VBXE_XDLXBANK 0
 #define VBXE_XDLBANK ((VBXE_XDLXBANK << (16 - VBXE_BANKSHIFT)) | (VBXE_XDLADDR >> VBXE_BANKSHIFT) | 0x80)
-#define VBXE_XDLMEM ((unsigned char *)(VBXE_BANKTOP + (VBXE_XDLADDR & VBXE_BANKMASK)))
+#define VBXE_XDLMEM (vbxe.bankTop + (VBXE_XDLADDR & VBXE_BANKMASK))
 
 #define VBXE_BLITADDR 0x0100 // address in VBXE memory of blitter data
 #define VBXE_BLITXBANK 0
 #define VBXE_BLITBANK ((VBXE_BLITXBANK << (16 - VBXE_BANKSHIFT)) | (VBXE_BLITADDR >> VBXE_BANKSHIFT) | 0x80) // Bank of VBXE blitter
-#define VBXE_BLITMEM ((blitterStruct *)(VBXE_BANKTOP + (VBXE_BLITADDR & VBXE_BANKMASK))) // 6502 address of blitter memory
+#define VBXE_BLITMEM ((blitterStruct *)(vbxe.bankTop + (VBXE_BLITADDR & VBXE_BANKMASK))) // 6502 address of blitter memory
 
 #define VBXE_FONTADDR 0x0800
 #define VBXE_FONTXBANK 0
 #define VBXE_FONTBANK ((VBXE_FONTXBANK << (16 - VBXE_BANKSHIFT)) | (VBXE_FONTADDR >> VBXE_BANKSHIFT) | 0x80)
-#define VBXE_FONTMEM ((unsigned char *)(VBXE_BANKTOP + (VBXE_FONTADDR & VBXE_BANKMASK)))
+#define VBXE_FONTMEM (vbxe.bankTop + (VBXE_FONTADDR & VBXE_BANKMASK))
 
 #define VBXE_SCREENADDR 0x1000 // address in VBXE memory of screen
 #define VBXE_SCREENXBANK 0
 #define VBXE_SCREENBANK ((VBXE_SCREENXBANK << (16 - VBXE_BANKSHIFT)) | (VBXE_SCREENADDR >> VBXE_BANKSHIFT) | 0x80) // Bank of VBXE Screen memory
-#define VBXE_SCREENMEM ((unsigned char *)(VBXE_BANKTOP + (VBXE_SCREENADDR & VBXE_BANKMASK))) // 6502 address of Screen
+#define VBXE_SCREENMEM (vbxe.bankTop + (VBXE_SCREENADDR & VBXE_BANKMASK)) // 6502 address of Screen
 
 
 typedef struct {
@@ -138,6 +137,7 @@ typedef struct {
 } blitterStruct;
 
 typedef struct {
+    unsigned char *bankTop;
     unsigned char sdmctl;
     unsigned char MEMAC_CONTROL;
     unsigned char MEMAC_BANK_SEL;
@@ -283,6 +283,7 @@ void initVbxe(void)
     unsigned char err = ERR_NONE;
     unsigned short n;
     unsigned char y;
+    vbxe.bankTop = (unsigned char *)0x1000; // Must be 0x1000 boundary
     OS.iocb[6].buffer = "S2:";
     OS.iocb[6].buflen = strlen("S:");
     OS.iocb[6].command = 96; // VBXE Bios detect
@@ -293,7 +294,7 @@ void initVbxe(void)
     vbxe.bios = ((err == ERR_NONE) && (OS.iocb[6].spare == 96));
 
 
-    vbxe.regs->MEMAC_CONTROL = (VBXE_BANKTOP >> 8) | 0x8 | (VBXE_BANKSHIFT - 12);       //  0x8 = CPU
+    vbxe.regs->MEMAC_CONTROL = (((unsigned short)vbxe.bankTop) >> 8) | 0x8 | (VBXE_BANKSHIFT - 12);       //  0x8 = CPU 
     vbxe.regs->MEMAC_BANK_SEL = VBXE_XDLBANK;
     memcpy(VBXE_FONTMEM, (unsigned char*)0xE000, 1024);
     initAscii(((unsigned short) VBXE_FONTMEM) >> 8);
