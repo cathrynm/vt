@@ -22,6 +22,8 @@ typedef struct {
 screenXStruct screenX;
 screenStruct screen;
 
+unsigned char sAtascii[4] = {0x40, 0x00, 0x20, 0x60};
+
 
 
 void callEColonSpecial(unsigned char command, unsigned char aux1, unsigned char aux2)

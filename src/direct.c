@@ -7,7 +7,6 @@ typedef struct {
 } directStruct;
 
 directStruct direct;
-unsigned char sAtascii[4] = {0x40, 0x00, 0x20, 0x60};
 
 void drawCharsAtDirect(unsigned char *s, unsigned char len)
 {

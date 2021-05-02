@@ -12,6 +12,7 @@ typedef struct {
 }screenXStruct;
 
 extern screenXStruct screenX;
+extern unsigned char sAtascii[4]; // Mapping from ascii to Atari on Screen
 
 void initScreen(void);
 void cursorUpdate(unsigned char x, unsigned char y);

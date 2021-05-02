@@ -15,7 +15,9 @@ ioStruct io;
 
 
 void ioOpen(unsigned char *deviceName, unsigned char deviceLen, openIoStruct *openIo, unsigned char *err) {
+#if FUJINET_ON
 	unsigned char *buff;
+#endif
 	io.deviceType = toupper((deviceLen > 0)? deviceName[0]: 0);
 	switch(io.deviceType) {
 #if SERIAL_ON

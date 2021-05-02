@@ -8,5 +8,5 @@ unsigned char directDrawTest(void);
 void initDirect(void);
 void restoreDirect(void);
 
-extern unsigned char sAtascii[4];
+
 #endif
