@@ -2,17 +2,17 @@
 #include "main.h"
 
 #define MAXARGV 8
-#define MAXLEN 255
+#define MAXLEN 120
 typedef struct {
-	char *argv[MAXARGV];
 	unsigned char *url; // [URLLEN+1];
 	unsigned char *baud; // [BAUDSTRLEN + 4];
 	unsigned char *user; // [USERPASSLEN+4];
 	unsigned char *passwd; // [USERPASSLEN+4];
+	char *argv[MAXARGV];
 	openIoStruct openIo;
 } configStruct;
 
-configStruct configData = {0};
+configStruct configData = {0, 0, 0, 0};
 
 void freeConfig(void)
 {
@@ -92,14 +92,16 @@ unsigned char urlIsType(unsigned char *s, unsigned char *typ) {
 
 unsigned char *parseParam(unsigned char *prompt, unsigned char p, unsigned char *err)
 {
-	unsigned char *param = malloc(MAXLEN);
+	unsigned char *param, *r;
 	unsigned char pLen = p?3:0, len;
+	param = malloc(MAXLEN);
 	if (!param) {
 		*err = ERR_OUTOFMEMORY;
 		freeConfig();
 		return NULL;
 	}
 	drawString(prompt);
+
 	len = getline(&param[pLen], MAXLEN - pLen - 1, err);
 	if (*err != ERR_NONE) {
 		free(param);
@@ -113,7 +115,15 @@ unsigned char *parseParam(unsigned char *prompt, unsigned char p, unsigned char 
 			param[1] = p;
 			param[2] = '=';
 		}
-		return realloc(param, strlen(param) + 1);
+		r = malloc(strlen(param) + 1);
+		if (!r) {
+			*err = ERR_OUTOFMEMORY;
+			free(param);
+			return NULL;
+		}
+		strcpy(r, param);
+		free(param);
+		return r;
 	} else {
 		free(param);
 		return NULL;
@@ -148,7 +158,6 @@ void geturl(int *argc, char ***argv, unsigned char *err)
 	}while((dev != 'N') && (dev != 'R'));
 	*argc = 1;
 	configData.argv[(*argc)++] = configData.url;
-
 	if (dev == 'R') {
 		do {
 			if (configData.baud)free(configData.baud);

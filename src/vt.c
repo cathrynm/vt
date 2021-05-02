@@ -852,6 +852,8 @@ void processCommand(unsigned char c, unsigned char *err)
 		case 'r': // set top and bottom margins
 			setVMargins(esc.params[0], esc.params[1]);
 			break;
+		case 't': // Seeing this?  What does it do?
+			break;
 		case 'u': // ansi.sys
 			cursorRestore();
 			break;
