@@ -165,7 +165,7 @@ void deleteCharXep(unsigned char x, unsigned char y)
 	OS.rmargn = xep.rMargn;
 	OS.dspflg = 0;
 	OS.rowcrs = y;
-	OS.colcrs = OS.lmargn + x;
+	OS.colcrs = x;
 	xepCursorShadow();
 	callEColonPutByte(CH_DELCHR);
 	xep.currentXepX = OS.colcrs;
@@ -180,7 +180,7 @@ void insertCharXep(unsigned char x, unsigned char y)
 	OS.rmargn = xep.rMargn;
 	OS.dspflg = 0;
 	OS.rowcrs = y;
-	OS.colcrs = OS.lmargn + x;
+	OS.colcrs = x;
 	xepCursorShadow();
 	callEColonPutByte(CH_INSCHR);
 	xep.currentXepX = OS.colcrs;
