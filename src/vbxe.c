@@ -1,5 +1,7 @@
 #include "main.h"
 
+#if VBXE_ON
+
 #define VBXE_WIDTH 80
 #define VBXE_HEIGHT 24
 #define VBXE_BANKTOP 0x4000
@@ -429,3 +431,5 @@ void deleteCharVbxe(unsigned char x, unsigned char y, unsigned char len, unsigne
     *pStart = color;
     vbxe.regs->MEMAC_BANK_SEL = 0;
 }
+
+#endif

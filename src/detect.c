@@ -26,9 +26,11 @@ void initDetect(void)
 		detect.videoMode = 'D';
 	} else if (XEP80Test()) {
 		detect.videoMode = 'X';
+#if VBXE_ON
 	} else if (vbxeTest()) {
 		detect.videoMode = 'V';
 		detect.hasColor = 1;
+#endif
 	} else if (rawConTest()) {
 		detect.videoMode = 'R';
 	} else if (logMapTrickTest()) {

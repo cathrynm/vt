@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 
+#include "options.h"
 #include "screen.h"
 #include "xep80.h"
 #include "direct.h"

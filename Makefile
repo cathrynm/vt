@@ -27,7 +27,7 @@ CONFIG  :=
  
 # Additional C compiler flags and options.
 # Default: none
-CFLAGS  = -Os
+CFLAGS  = -Os -W -unused-param
  
 # Additional assembler flags and options.
 # Default: none

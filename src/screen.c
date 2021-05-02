@@ -82,9 +82,11 @@ void initScreen(void)
 		case 'D':
 			initDirect();
 			break;
+#if VBXE_ON
 		case 'V':
 			initVbxe();
 			break;
+#endif
 		case 'R':
 			initRawCon();
 			break;
@@ -105,9 +107,11 @@ void screenRestore(void)
 		case 'D':
 			restoreDirect();
 			break;
+#if VBXE_ON
 		case 'V':
 			restoreVbxe();
 			break;
+#endif
 		default:break;
 	}
 	OS.dspflg = 0;
@@ -124,10 +128,12 @@ void drawClearScreen(unsigned char color)
 		case 'X':
 			clearScreenXep();
 			break;
+#if VBXE_ON
 		case 'V': {
 			clearScreenVbxe(color);
 			break;
 		}
+#endif
 		default:
 			OS.dspflg = 0;
 			callEColonPutByte(clearScreenChar);
@@ -149,9 +155,11 @@ void cursorHide(void)
 	if (OS.crsinh) return;
 	OS.crsinh = 1;
 	switch(detect.videoMode) {
+#if VBXE_ON
 		case 'V':
 			cursorHideVbxe();
 			break;
+#endif
 		default:
 			break;
 	}
@@ -172,9 +180,11 @@ void cursorUpdate(unsigned char x, unsigned char y)
 		case 'X':
 			cursorUpdateXep(x, y);
 			break;
+#if VBXE_ON
 		case 'V':
 			cursorUpdateVbxe(x, y);
 			break;
+#endif
 		default:
 			OS.rowcrs = y;
 			bumpCursor();
@@ -198,9 +208,11 @@ void drawCharsAt(unsigned char *buffer, unsigned char bufferLen, unsigned char x
 		case 'X':
 			drawCharsAtXep(buffer, bufferLen);
 			break;
+#if VBXE_ON
 		case 'V':
 			drawCharsAtVbxe(buffer, bufferLen);
 			break;
+#endif
 		case 'R':
 			drawCharsAtRawCon(buffer, bufferLen);
 			break;
@@ -311,9 +323,11 @@ void drawInsertLine(unsigned char y, unsigned char yBottom, unsigned char color)
 		case 'D':
 			insertLineDirect(y, yBottom);
 			break;
+#if VBXE_ON
 		case 'V':
 			insertLineVbxe(y, yBottom, color);
 			break;
+#endif
 		case 'R':
 			insertLineRawCon(y, yBottom);
 			break;
@@ -344,9 +358,11 @@ void drawDeleteLine(unsigned char y, unsigned char yBottom, unsigned char color)
 		case 'D':
 			deleteLineDirect(y, yBottom);
 			break;
+#if VBXE_ON
 		case 'V':
 			deleteLineVbxe(y, yBottom, color);
 			break;
+#endif
 		case 'R':
 			deleteLineRawCon(y, yBottom);
 			break;
@@ -374,9 +390,11 @@ void drawInsertChar(unsigned char x, unsigned char y, unsigned char color)
 		case 'X':
 			insertCharXep(x, y);
 			break;
+#if VBXE_ON
 		case 'V':
 			insertCharVbxe(x, y, color);
 			break;
+#endif
 		default:
 			OS.dspflg = 0;
 			OS.rowcrs = y;
@@ -400,9 +418,11 @@ void drawDeleteChar(unsigned char x, unsigned char y, unsigned char color)
 		case 'X':
 			deleteCharXep(x, y);
 			break;
+#if VBXE_ON
 		case 'V':
 			deleteCharVbxe(x, y, screenX.lineLength[y] - x, color);
 			break;
+#endif
 		default:
 			OS.dspflg = 0;
 			OS.rowcrs = y;

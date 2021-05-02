@@ -1,6 +1,6 @@
 
 #include "main.h"
-#define ATARIINTERNATIONAL 0
+
 
 typedef struct chioDataStruct chioStruct;
 struct chioDataStruct {
