@@ -1,10 +1,40 @@
 #include "main.h"
+
+#if FUJINET_ON
+
 #define SIO_TIMEOUT 2
 
 #define sio()     \
   (   \
   __asm__ ("jsr $e459") \
   )
+
+unsigned char *processFilename(unsigned char *fName, unsigned char len, unsigned char *device, unsigned char **buff, unsigned char *err) {
+  *buff = 0;
+  if (!len || (*err != ERR_NONE)) {
+    errUpdate(ERR_DEVICENOTEXIST, err);
+    return fName;
+  }
+  if (islower(fName[0])) {
+    *buff = malloc(len);
+    if (! *buff) {
+      errUpdate(ERR_OUTOFMEMORY, err);
+      return fName;
+    }
+    memCopy(*buff, fName, len);
+    fName = *buff;
+    fName[0] = toupper(fName[0]);
+  }
+  switch(fName[0]) {
+    case 'N': // Only N: goes to SIO
+      *device = 0x70 + (isdigit(fName[1])? (fName[1] - '0'):1);
+      break;
+    default:
+      *device = 0;
+      break;
+  }
+  return fName;
+}
 
 unsigned char dcbErrUpdate(unsigned char *oldErr)
 {
@@ -180,3 +210,5 @@ unsigned short sioStatus(unsigned char device, unsigned char *err) {
   if (OS.dvstat[3]) *err = OS.dvstat[3]; // dvstat[3] is error for Fujinet and daux2 = 0
   return * (unsigned short *) &OS.dvstat[0];
 }
+
+#endif

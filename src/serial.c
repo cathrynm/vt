@@ -1,4 +1,5 @@
 #include "main.h"
+#if SERIAL_ON
 
 #define cio(iocb)			\
 	(__AX__ = (iocb),		\
@@ -213,3 +214,5 @@ void sendSerialResponse(unsigned char *s, unsigned char len, unsigned char *err)
 	cio(IOCB_SERIAL);
 	iocbErrUpdate(IOCB_SERIAL, err);
 }
+
+#endif

@@ -1,5 +1,7 @@
 #include "main.h"
 
+#if XEP_ON
+
 #define XEPLINES 25
 #define XEPATR_INVERSE 0x1
 #define XEPATR_BLINK 0x4
@@ -252,3 +254,5 @@ unsigned char XEP80Test(void)
 	}
 	return 0;
 }
+
+#endif

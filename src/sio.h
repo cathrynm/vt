@@ -12,5 +12,6 @@ void sioClose(unsigned char device, unsigned char *err);
 void sioOpen(unsigned char *fName, unsigned char fLen, unsigned char device, unsigned char aux1, unsigned char aux2, unsigned char *err);
 void sioSpecial(unsigned char *fName, unsigned char fLen, unsigned char device, unsigned char special, unsigned char dStats, unsigned char aux1, unsigned char aux2, unsigned char *err);
 unsigned short sioStatus(unsigned char device, unsigned char *err);
+unsigned char *processFilename(unsigned char *fName, unsigned char len, unsigned char *device, unsigned char **buff, unsigned char *err);
 
 #endif

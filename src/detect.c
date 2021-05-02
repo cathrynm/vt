@@ -22,22 +22,34 @@ void initDetect(void)
 	detect.chbas = OS.chbas;
 	detect.fullChbas = 0;
 	detect.hasColor  = 0;
-	if (directDrawTest()) {
+	detect.videoMode = 0;
+	if (0) {
+#if DIRECT_ON
+	} else if (directDrawTest()) {
 		detect.videoMode = 'D';
+#endif
+#if XEP_ON
 	} else if (XEP80Test()) {
 		detect.videoMode = 'X';
+#endif
 #if VBXE_ON
 	} else if (vbxeTest()) {
 		detect.videoMode = 'V';
 		detect.hasColor = 1;
 #endif
+#if RAWCON_ON
 	} else if (rawConTest()) {
 		detect.videoMode = 'R';
+#endif
+#if CIO_ON
 	} else if (logMapTrickTest()) {
 		detect.videoMode = 'A'; // This is normal Atari mode, but not direct drawing.  I think everything that does this passes directDrawTest, but maybe someday...
 	} else {
 		detect.videoMode = 'G'; // Generic Atari  
+#endif
 	}
+
+#if DIRECT_ON
 	if (detect.videoMode == 'D') {
 		startAddress &= ~0x3ff;
 		if (((unsigned short) OS.memlo + 0x400 <= startAddress)  && !(startAddress & 0x3ff)) {
@@ -45,6 +57,7 @@ void initDetect(void)
 			detect.fullChbas = startAddress >> 8;
 		}
 	}
+#endif
 	if ((unsigned short) OS.memlo < startAddress)
 		_heapadd(OS.memlo, startAddress - (unsigned short) OS.memlo); // recover memory below font and above lomem
 }

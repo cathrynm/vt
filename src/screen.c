@@ -5,12 +5,16 @@
 
 
 #define SCREENCOLUMNS 80
-
+#if VBXE_ON
+#define ATTRIBS 2
+#else
+#define ATTRIBS 1
+#endif
 
 typedef struct {
 	unsigned char bufferLen, bufferX, bufferY;
-	unsigned char clearBuffer[SCREENCOLUMNS*2];
-	unsigned char buffer[SCREENCOLUMNS*2];
+	unsigned char clearBuffer[SCREENCOLUMNS*ATTRIBS];
+	unsigned char buffer[SCREENCOLUMNS*ATTRIBS];
 	void (*eColonSpecial)();
 	unsigned char altScreen;
 }screenStruct;
@@ -76,20 +80,26 @@ void initScreen(void)
 		break;
 	}
 	switch(detect.videoMode) {
+#if XEP_ON
 		case 'X':
 			initXep();
 			break;
+#endif
+#if DIRECT_ON
 		case 'D':
 			initDirect();
 			break;
+#endif
 #if VBXE_ON
 		case 'V':
 			initVbxe();
 			break;
 #endif
+#if RAWCON_ON
 		case 'R':
 			initRawCon();
 			break;
+#endif
 		default: {
 			break;
 		}
@@ -101,12 +111,16 @@ void screenRestore(void)
 {
 	flushBuffer();
 	switch(detect.videoMode) {
+#if XEP_ON
 		case 'X':
 			restoreXep();
 			break;
+#endif
+#if DIRECT_ON
 		case 'D':
 			restoreDirect();
 			break;
+#endif
 #if VBXE_ON
 		case 'V':
 			restoreVbxe();
@@ -125,19 +139,23 @@ void drawClearScreen(unsigned char color)
 	flushBuffer();
 
 	switch(detect.videoMode) {
+#if XEP_ON
 		case 'X':
 			clearScreenXep();
 			break;
+#endif
 #if VBXE_ON
 		case 'V': {
 			clearScreenVbxe(color);
 			break;
 		}
 #endif
+#if CIO_ON || DIRECT_ON || RAWCON_ON
 		default:
 			OS.dspflg = 0;
 			callEColonPutByte(clearScreenChar);
 			break;
+#endif
 	}
 	for (y = 0;y< 24;y++) screenX.lineLength[y] = 0;
 }
@@ -177,18 +195,22 @@ void cursorUpdate(unsigned char x, unsigned char y)
 	OS.crsinh = 0;
 	OS.colcrs = x + OS.lmargn;
 	switch(detect.videoMode) {
+#if XEP_ON
 		case 'X':
 			cursorUpdateXep(x, y);
 			break;
+#endif
 #if VBXE_ON
 		case 'V':
 			cursorUpdateVbxe(x, y);
 			break;
 #endif
+#if CIO_ON || DIRECT_ON || RAWCON_ON
 		default:
 			OS.rowcrs = y;
 			bumpCursor();
 			break;
+#endif
 	}
 }
 
@@ -202,21 +224,29 @@ void drawCharsAt(unsigned char *buffer, unsigned char bufferLen, unsigned char x
 	OS.rowcrs = y;
 	OS.colcrs = x;
 	switch(detect.videoMode) {
+#if DIRECT_ON
 		case 'D':
 			drawCharsAtDirect(buffer, bufferLen);
 			break;
+#endif
+#if XEP_ON
 		case 'X':
 			drawCharsAtXep(buffer, bufferLen);
 			break;
+#endif
 #if VBXE_ON
 		case 'V':
 			drawCharsAtVbxe(buffer, bufferLen);
 			break;
 #endif
+#if RAWCON_ON
 		case 'R':
 			drawCharsAtRawCon(buffer, bufferLen);
 			break;
-		default:
+#endif
+#if CIO_ON
+		case 'A':
+		case 'G':
 			if (x + bufferLen < screenX.screenWidth) {
 				callEColonPutBytes(buffer, bufferLen);
 			} else if ((detect.videoMode == 'A') && (y < SCREENLINES-1)) {
@@ -248,6 +278,7 @@ void drawCharsAt(unsigned char *buffer, unsigned char bufferLen, unsigned char x
 				}
 			}
 			break;
+#endif
 	}
 }
 
@@ -317,21 +348,29 @@ void drawInsertLine(unsigned char y, unsigned char yBottom, unsigned char color)
 	unsigned char yp;
 	flushBuffer();
 	switch(detect.videoMode) {
+#if XEP_ON
 		case 'X':
 			insertLineXep(y, yBottom);
 			break;
+#endif
+#if DIRECT_ON
 		case 'D':
 			insertLineDirect(y, yBottom);
 			break;
+#endif
 #if VBXE_ON
 		case 'V':
 			insertLineVbxe(y, yBottom, color);
 			break;
 #endif
+#if RAWCON_ON
 		case 'R':
 			insertLineRawCon(y, yBottom);
 			break;
-		default:
+#endif
+#if CIO_ON
+		case 'A':
+		case 'G':
 			OS.dspflg = 0;
 			OS.colcrs = OS.lmargn;
 			if (yBottom < SCREENLINES -1) {
@@ -342,6 +381,7 @@ void drawInsertLine(unsigned char y, unsigned char yBottom, unsigned char color)
 			OS.rowcrs = y;
 			callEColonPutByte(CH_INSLINE);
 			break;
+#endif
 	}
 	for (yp = yBottom;yp > y;yp--) screenX.lineLength[yp] = screenX.lineLength[yp-1];
 	screenX.lineLength[y] = 0;
@@ -352,20 +392,27 @@ void drawDeleteLine(unsigned char y, unsigned char yBottom, unsigned char color)
 	unsigned char yp;
 	flushBuffer();
 	switch (detect.videoMode) {
+#if XEP_ON
 		case 'X':
 			deleteLineXep(y, yBottom);
 			break;
+#endif
+#if DIRECT_ON
 		case 'D':
 			deleteLineDirect(y, yBottom);
 			break;
+#endif
 #if VBXE_ON
 		case 'V':
 			deleteLineVbxe(y, yBottom, color);
 			break;
 #endif
+#if RAWCON_ON
 		case 'R':
 			deleteLineRawCon(y, yBottom);
 			break;
+#endif
+#if CIO_ON
 		default:
 			OS.dspflg = 0;
 			OS.rowcrs = y;
@@ -377,6 +424,7 @@ void drawDeleteLine(unsigned char y, unsigned char yBottom, unsigned char color)
 				callEColonPutByte(CH_INSLINE);
 			}
 			break;
+#endif
 	}
 	for (yp = y;yp+1 <= yBottom;yp++) screenX.lineLength[yp] = screenX.lineLength[yp+1];
 	screenX.lineLength[yBottom] = 0;
@@ -387,14 +435,17 @@ void drawInsertChar(unsigned char x, unsigned char y, unsigned char color)
 	if (x >= screenX.lineLength[y])return;
 	flushBuffer();
 	switch(detect.videoMode) {
+#if XEP_ON
 		case 'X':
 			insertCharXep(x, y);
 			break;
+#endif
 #if VBXE_ON
 		case 'V':
 			insertCharVbxe(x, y, color);
 			break;
 #endif
+#if CIO_ON || DIRECT_ON || RAWCON_ON
 		default:
 			OS.dspflg = 0;
 			OS.rowcrs = y;
@@ -406,6 +457,7 @@ void drawInsertChar(unsigned char x, unsigned char y, unsigned char color)
 			OS.colcrs = OS.lmargn + x;;
 			callEColonPutByte(CH_INSCHR);
 			break;
+#endif
 	}
 	if (screenX.lineLength[y] < screenX.screenWidth)screenX.lineLength[y]++;
 }
@@ -415,20 +467,24 @@ void drawDeleteChar(unsigned char x, unsigned char y, unsigned char color)
 	if (x >= screenX.lineLength[y])return;
 	flushBuffer();
 	switch(detect.videoMode) {
+#if XEP_ON
 		case 'X':
 			deleteCharXep(x, y);
 			break;
+#endif
 #if VBXE_ON
 		case 'V':
 			deleteCharVbxe(x, y, screenX.lineLength[y] - x, color);
 			break;
 #endif
+#if CIO_ON || DIRECT_ON || RAWCON_ON
 		default:
 			OS.dspflg = 0;
 			OS.rowcrs = y;
 			OS.colcrs = OS.lmargn + x;
 			callEColonPutByte(CH_DELCHR);
 			break;
+#endif
 	}
 	screenX.lineLength[y]--;
 }

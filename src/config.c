@@ -4,10 +4,14 @@
 #define MAXARGV 8
 #define MAXLEN 120
 typedef struct {
-	unsigned char *url; // [URLLEN+1];
-	unsigned char *baud; // [BAUDSTRLEN + 4];
-	unsigned char *user; // [USERPASSLEN+4];
-	unsigned char *passwd; // [USERPASSLEN+4];
+	unsigned char *url;
+#if SERIAL_ON
+	unsigned char *baud;
+#endif
+#if FUJINET_ON
+	unsigned char *user;
+	unsigned char *passwd;
+#endif
 	char *argv[MAXARGV];
 	openIoStruct openIo;
 } configStruct;
@@ -20,10 +24,13 @@ void freeConfig(void)
 		free(configData.url);
 		configData.url = NULL;
 	}
+#if SERIAL_ON
 	if (configData.baud) {
 		free(configData.baud);
 		configData.baud = NULL;
 	}
+#endif
+#if FUJINET_ON
 	if (configData.user) {
 		free(configData.user);
 		configData.user = NULL;
@@ -32,6 +39,7 @@ void freeConfig(void)
 		free(configData.passwd);
 		configData.passwd = NULL;
 	}
+#endif
 }
 
 void crToZero(unsigned char *s, unsigned char len)
@@ -63,6 +71,7 @@ unsigned char sanitizeUrl(unsigned char *s)
 	return foundColon && foundDevice;
 }
 
+#if SERIAL_ON
 unsigned char sanitizeBaud(unsigned char *s)
 {
 	unsigned char n, m;
@@ -77,6 +86,7 @@ unsigned char sanitizeBaud(unsigned char *s)
 	s[m] = 0;
 	return ( m > 0);
 }
+#endif
 
 unsigned char urlIsType(unsigned char *s, unsigned char *typ) {
 	for (;*s != ':';s++) {
@@ -130,6 +140,20 @@ unsigned char *parseParam(unsigned char *prompt, unsigned char p, unsigned char 
 	}
 }
 
+#if SERIAL_ON && FUJINET_ON
+#define PARSESTRING " R: or N:ssh://[fqdn]\x9b URL:"
+#else 
+	#if SERIAL_ON
+	#define PARSESTRING " R:\0x9b URL:"
+	#else
+		#if  FUJINET_ON
+			#define PARSESTRING " N:ssh://[fqdn]\0x9b URL:"
+		#else
+			#define PARSESTRING " \0x9b URL:"
+		#endif
+	#endif
+#endif
+
 void geturl(int *argc, char ***argv, unsigned char *err)
 {
 	static unsigned char error[] = "ERROR: 000\x9b";
@@ -151,31 +175,38 @@ void geturl(int *argc, char ***argv, unsigned char *err)
 	drawString("\x9b BREAK to quit\x9b");
 	do {
 		if (configData.url)free(configData.url);
-		configData.url = parseParam(" R: or N:ssh://[fqdn]\x9b URL:", 0, err);
+		configData.url = parseParam(PARSESTRING, 0, err);
 		if (*err != ERR_NONE) return;
 		if (!configData.url || !sanitizeUrl(configData.url))continue;
 		dev = configData.url[0];
 	}while((dev != 'N') && (dev != 'R'));
 	*argc = 1;
 	configData.argv[(*argc)++] = configData.url;
-	if (dev == 'R') {
-		do {
-			if (configData.baud)free(configData.baud);
-			configData.baud = parseParam(" 300,1200,2400,4800,9600,19200\x9b BAUD:", 'B', err);
-			if (*err != ERR_NONE) return;
-			if (!configData.baud || !sanitizeBaud(&configData.baud[3]))continue;
-			baud = stringToBaud(&configData.baud[3]);
-		}while(baud == BAUD_NONE);
-		configData.argv[(*argc)++] = configData.baud;
-	} else if (dev == 'N') {
-		if (urlIsType(configData.url, "ssh://")) {
-			configData.user = parseParam(" USERNAME:", 'U', err);
-			if (*err != ERR_NONE) return;
-			if (configData.user)configData.argv[(*argc)++] = configData.user;
-			configData.passwd = parseParam(" PASSWORD:", 'P', err);
-			if (*err != ERR_NONE) return;
-			if (configData.passwd)configData.argv[(*argc)++] = configData.passwd;
-		}
+	switch(dev) {
+#if SERIAL_ON
+		case 'R':
+			do {
+				if (configData.baud)free(configData.baud);
+				configData.baud = parseParam(" 300,1200,2400,4800,9600,19200\x9b BAUD:", 'B', err);
+				if (*err != ERR_NONE) return;
+				if (!configData.baud || !sanitizeBaud(&configData.baud[3]))continue;
+				baud = stringToBaud(&configData.baud[3]);
+			}while(baud == BAUD_NONE);
+			configData.argv[(*argc)++] = configData.baud;
+			break;
+#endif 
+#if FUJINET_ON
+		case 'N': 
+			if (urlIsType(configData.url, "ssh://")) {
+				configData.user = parseParam(" USERNAME:", 'U', err);
+				if (*err != ERR_NONE) return;
+				if (configData.user)configData.argv[(*argc)++] = configData.user;
+				configData.passwd = parseParam(" PASSWORD:", 'P', err);
+				if (*err != ERR_NONE) return;
+				if (configData.passwd)configData.argv[(*argc)++] = configData.passwd;
+			}
+			break;
+#endif
 	}
 }
 
@@ -183,14 +214,19 @@ void parseCommandLine(int argc, char **argv, unsigned char **device, openIoStruc
 {
 	int n, cnt = 0;
 	unsigned char *s;
+#if SERIAL_ON
 	openIo->baudWordStop = BAUD_9600;
 	openIo->mon = 0;
+#endif
+#if FUJINET_ON
 	openIo->user = NULL;
 	openIo->passwd = NULL;
+#endif
 	for (n = 1;n<argc;n++) if (argv[n][0] == '/') {
 		s = &argv[n][2];
 		if (*s == '=')s++;
 		switch(toupper(argv[n][1])) {
+#if SERIAL_ON
 			case 'B':
 				openIo->baudWordStop = stringToBaud(s);
 				if (openIo->baudWordStop == BAUD_NONE) {
@@ -198,12 +234,15 @@ void parseCommandLine(int argc, char **argv, unsigned char **device, openIoStruc
 					return;
 				}
 				break;
+#endif
+#if FUJINET_ON
 			case 'U':
 				openIo->user = s;
 				break;
 			case 'P':
 				openIo->passwd = s;
 				break;
+#endif
 			default:
 				break;
 		}

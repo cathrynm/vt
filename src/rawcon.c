@@ -1,5 +1,7 @@
 #include "main.h"
 
+#if RAWCON_ON
+
 typedef struct {
 	unsigned char numEntries;
 	void __fastcall__ (*enable)(void);
@@ -180,3 +182,5 @@ void insertLineRawCon(unsigned char topY, unsigned char bottomY)
 void initRawCon(void)
 {
 }
+
+#endif

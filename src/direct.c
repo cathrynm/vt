@@ -1,5 +1,7 @@
 #include "main.h"
 
+#if DIRECT_ON
+
 typedef struct {
 	unsigned char lineWidth;
 } directStruct;
@@ -108,3 +110,5 @@ void restoreDirect(void)
 {
 	if (detect.fullChbas)OS.chbas = detect.chbas;
 }
+
+#endif

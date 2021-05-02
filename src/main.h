@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <ctype.h>
 
+#pragma warn (unused-param, push, off)
+
 #include "options.h"
 #include "screen.h"
 #include "xep80.h"

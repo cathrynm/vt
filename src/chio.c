@@ -51,11 +51,14 @@ unsigned char closeChio(void)
 // Note, only need to check ones that go past 16 bits here.  These all get processed as drawable, not controls.
 void convertLongToVisibleChar(unsigned long c, unsigned char *ch, unsigned char *attrib)
 {
-	if (isXep80Internal()) {
+	if (0) {
+#if XEP_ON
+	} else if (isXep80Internal()) {
 		switch(c) {
 			default:
 				break;
 		}
+#endif
 #if ATARIINTERNATIONAL
 	} else if (isIntl()) { // international 
 		switch(c) {
@@ -135,7 +138,9 @@ void convertAsciiToVisibleChar(unsigned char *ch, unsigned char *attrib)
 void convertShortToVisibleChar(unsigned short c, unsigned char *ch, unsigned char *attrib)
 {
 	*attrib = 0;
-	if (isXep80Internal()) {
+	if (0) {
+#if XEP_ON
+	} else if (isXep80Internal()) {
 		switch(c) {
 			case 0x0132:
 	            *ch = XEPICH_CIJ;
@@ -235,6 +240,7 @@ void convertShortToVisibleChar(unsigned short c, unsigned char *ch, unsigned cha
 	            return;
 			default:break;
 		}
+#endif
 #if ATARIINTERNATIONAL
 	} else if (isIntl()) { // international 
 		switch(c) {

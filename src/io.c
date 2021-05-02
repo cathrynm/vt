@@ -6,44 +6,24 @@ typedef struct {
 	unsigned char *deviceName;
 	unsigned char deviceLen;
 	unsigned char deviceType;
+#if FUJINET_ON
 	unsigned char sioDevice;
+#endif
 } ioStruct;
 ioStruct io;
 
-unsigned char *processFilename(unsigned char *fName, unsigned char len, unsigned char *device, unsigned char **buff, unsigned char *err) {
-  *buff = 0;
-  if (!len || (*err != ERR_NONE)) {
-    errUpdate(ERR_DEVICENOTEXIST, err);
-    return fName;
-  }
-  if (islower(fName[0])) {
-    *buff = malloc(len);
-    if (! *buff) {
-      errUpdate(ERR_OUTOFMEMORY, err);
-      return fName;
-    }
-    memCopy(*buff, fName, len);
-    fName = *buff;
-    fName[0] = toupper(fName[0]);
-  }
-  switch(fName[0]) {
-    case 'N': // Only N: goes to SIO
-      *device = 0x70 + (isdigit(fName[1])? (fName[1] - '0'):1);
-      break;
-    default:
-      *device = 0;
-      break;
-  }
-  return fName;
-}
+
 
 void ioOpen(unsigned char *deviceName, unsigned char deviceLen, openIoStruct *openIo, unsigned char *err) {
 	unsigned char *buff;
 	io.deviceType = toupper((deviceLen > 0)? deviceName[0]: 0);
 	switch(io.deviceType) {
+#if SERIAL_ON
 		case 'R':
 			serialOpen(deviceName, deviceLen, openIo->baudWordStop, openIo->mon, err);
 			break;
+#endif
+#if FUJINET_ON
 		case 'N':
 			deviceName = processFilename(deviceName, deviceLen, &io.sioDevice, &buff, err);
 			if ((*err == ERR_NONE)  && openIo->user)
@@ -55,6 +35,7 @@ void ioOpen(unsigned char *deviceName, unsigned char deviceLen, openIoStruct *op
 			if (*err == ERR_NONE) enableInterrupt();
 			if (buff)free(buff);
 			break;
+#endif
 		default:
 			errUpdate(ERR_DEVICENOTEXIST, err);
 			break;
@@ -71,10 +52,14 @@ void ioOpen(unsigned char *deviceName, unsigned char deviceLen, openIoStruct *op
 
 unsigned short ioStatus(unsigned char *err) {
 	switch(io.deviceType) {
+#if SERIAL_ON
 		case 'R':
 			return serialStatus(err);
+#endif
+#if FUJINET_ON
 		case 'N':
 			return sioStatus(io.sioDevice, err);
+#endif
 		default:
 			errUpdate(ERR_DEVICENOTEXIST, err);
 			break;
@@ -83,11 +68,15 @@ unsigned short ioStatus(unsigned char *err) {
 
 void ioFlow(unsigned short inputReady, unsigned char *err) {
 	switch(io.deviceType) {
+#if SERIAL_ON
 		case 'R':
 			serialFlow(inputReady, err);
 			break;
+#endif
+#if FUJINET_ON
 		case 'N':
 			break;
+#endif
 		default:
 			errUpdate(ERR_DEVICENOTEXIST, err);
 			break;
@@ -96,12 +85,16 @@ void ioFlow(unsigned short inputReady, unsigned char *err) {
 
 void ioRead(unsigned char *data, unsigned short len, unsigned char *err) {
 	switch(io.deviceType) {
+#if SERIAL_ON
 		case 'R':
 			serialRead(data, len, err);
 			break;
+#endif
+#if FUJINET_ON
 		case 'N':
 			sioRead(data, len, io.sioDevice, err);
 			break;
+#endif
 		default:
 			errUpdate(ERR_DEVICENOTEXIST, err);;
 			break;
@@ -138,13 +131,17 @@ void readData(unsigned char *err) {
 void ioClose(unsigned char *err)
 {
 	switch(io.deviceType) {
+#if SERIAL_ON
 		case 'R':
 			serialClose(io.deviceName, io.deviceLen, err);
 			break;
+#endif
+#if FUJINET_ON
 		case 'N':
 			sioClose(io.sioDevice, err);
 			closeInterrupt();
 			break;
+#endif
 		default:
 			errUpdate(ERR_DEVICENOTEXIST, err);
 			break;
@@ -154,12 +151,16 @@ void ioClose(unsigned char *err)
 void sendIoResponse(unsigned char *s, unsigned char len, unsigned char *err)
 {
 	switch(io.deviceType) {
+#if SERIAL_ON
 		case 'R':
 			sendSerialResponse(s, len, err);
 			break;
+#endif
+#if FUJINET_ON
 		case 'N':
 			sioWrite(s, len, io.sioDevice, err);
 			break;
+#endif
 		default:
 			errUpdate(ERR_DEVICENOTEXIST, err);
 			break;

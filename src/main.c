@@ -20,6 +20,9 @@ void main(int argc, char **argv)
 	OS.lmargn = crt0.LMARGN_save;
 	for (n= 0;n<argc;n++) crToZero(argv[n], strlen(argv[n]));
 	initDetect();
+	if (!detect.videoMode) {
+		exit(100);
+	}	
 
 	for(;;) {
 		if (argc < 2) {
