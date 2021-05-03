@@ -107,7 +107,7 @@ void initScreen(void)
 			break;
 		}
 	}
-	drawClearScreen(0);
+	drawClearScreen(currentColor()? currentColor() : DEFAULTCOLOR);
 }
 
 void screenRestore(void)
