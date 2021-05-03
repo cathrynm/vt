@@ -1,8 +1,8 @@
 #ifndef CHIO_H
 #define CHIO_H
 
-#define ERRCHAR ' '
-#define ERRATTRIB 0x80
+#define ERRCHAR 0x7f
+#define ERRATTRIB 0
 
 #define CH_INSCHR 0xff
 #define ERR_NONE 1
@@ -47,7 +47,7 @@ unsigned char anyKey(void);
 unsigned char getline(unsigned char *buf, unsigned char len, unsigned char *err);
 void drawString(unsigned char *s);
 void drawChar(unsigned char ch);
-void initAscii(unsigned char fontBase);
+void initAscii(unsigned char fontBase, void(*copyChar)(unsigned char, unsigned char *));
 void enableInterrupt(void);
 unsigned char proceedReady(void);
 void doneProceeed(void);

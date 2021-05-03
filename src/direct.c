@@ -97,7 +97,7 @@ void initDirect(void)
 {
 	unsigned char y;
 	if (detect.fullChbas) {
-		initAscii(detect.fullChbas);
+		initAscii(detect.fullChbas, NULL);
 		OS.chbas = detect.fullChbas;
 	}
 	for (y = 0;y< SCREENLINES;y++) {

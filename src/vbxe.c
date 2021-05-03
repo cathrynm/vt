@@ -221,6 +221,12 @@ void vbxeWrite(unsigned char *dest, unsigned char bank, unsigned char len) // Do
     writeVBXE(bank | (len << 8));
 }
 
+void vbxeWriteFrom(unsigned char *dest, unsigned char *src, unsigned char bank, unsigned char len)
+{
+    memcpy(&vbxeData[0], src, len);
+    vbxeWrite(dest, bank, len);
+}
+
 unsigned char vbxeRead(unsigned char *dest, unsigned char bank)
 {
     vbxeReadAddr = (void *) dest;
@@ -274,10 +280,15 @@ void initPalette(void)
     }
 }
 
+void copyCharVbxe(unsigned char ch, unsigned char *from)
+{
+    vbxeWriteFrom(VBXE_FONTMEM + ((unsigned short) ch << 3), from, VBXE_FONTBANK, 8);
+}
+
+
 void initVbxe(void)
 {
     unsigned char err = ERR_NONE;
-    unsigned short n;
     unsigned char y;
     vbxe.bankTop = (unsigned char *)0x2000; // Must be 0x1000 boundary
     OS.iocb[6].buffer = "S2:";
@@ -288,20 +299,13 @@ void initVbxe(void)
     cio(6);
     iocbErrUpdate(6, &err);
     vbxe.bios = ((err == ERR_NONE) && (OS.iocb[6].spare == 96));
-
-
     vbxe.regs->MEMAC_CONTROL = (((unsigned short)vbxe.bankTop) >> 8) | 0x8 | (VBXE_BANKSHIFT - 12);       //  0x8 = CPU 
-    vbxe.regs->MEMAC_BANK_SEL = VBXE_XDLBANK;
-    memcpy(VBXE_FONTMEM, (unsigned char*)0xE000, 1024);
-    initAscii(((unsigned short) VBXE_FONTMEM) >> 8);
-    for (n = 0;n<1024;n++ ) {
-        VBXE_FONTMEM[n + 1024] = VBXE_FONTMEM[n] ^ 0xff; 
-    }
-    memcpy(VBXE_XDLMEM, displayList, sizeof(displayList));
+    initAscii(detect.fullChbas, copyCharVbxe);
+    vbxeWriteFrom(VBXE_XDLMEM, displayList, VBXE_XDLBANK, sizeof(displayList));
     vbxe.regs->XDL_ADR = VBXE_XDLADDR;
     vbxe.regs->XDL_ADR2 = VBXE_XDLXBANK;
     vbxe.regs->VIDEO_CONTROL = 0x01;
-    vbxe.regs->MEMAC_BANK_SEL = 0x0;
+
     initPalette();
     for (y = 0;y < SCREENLINES;y++) {
         screenX.lineTab[y] = (unsigned short) y * VBXE_WIDTH * 2;

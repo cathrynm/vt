@@ -19,7 +19,11 @@ void initDetect(void)
 {
 	unsigned short startAddress = (unsigned short)&_STARTADDRESS__; // Start the program on 0x400 boundary.  So 0x400 below is good
 	detect.osType = get_ostype() & AT_OS_TYPE_MAIN;
+#if ATARIINTERNATIONAL
 	detect.chbas = OS.chbas;
+#else
+	detect.chbas = 0xe0;
+#endif
 	detect.fullChbas = 0;
 	detect.hasColor  = 0;
 	detect.videoMode = 0;

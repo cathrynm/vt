@@ -63,9 +63,12 @@ void convertLongToVisibleChar(unsigned long c, unsigned char *ch, unsigned char 
 	} else if (isIntl()) { // international 
 		switch(c) {
 			case 0x1F8B0:
-				*ch = 0x7d;
-				*attrib = 0;
-				return;
+				if (!chio.fullAscii) {
+					*ch = 0x7d;
+					*attrib = 0;
+					return;
+				}
+				break;
 			default:
 				break;
 		}
@@ -81,9 +84,12 @@ void convertLongToVisibleChar(unsigned long c, unsigned char *ch, unsigned char 
 				*attrib = 0;
 				return;
 			case 0x1F8B0:
-				*ch = 0x7d;
-				*attrib = 0;
-				return;
+				if (!chio.fullAscii) {
+					*ch = 0x7d;
+					*attrib = 0;
+					return;
+				}
+				break;
 			default:
 				break;
 		}
@@ -333,16 +339,14 @@ void convertShortToVisibleChar(unsigned short c, unsigned char *ch, unsigned cha
 				return;
 
 			case 0x00a1: // !
-				*ch = 0x60;
-				return;
-
+				if (!chio.fullAscii) {
+					*ch = 0x60;
+					return;
+				}
+				break;
 			case 0x00c4: // A
 				*ch = 0xfb;
 				return;
-
-
-
-
 			case 0x241B:
 				*ch = 0x1b;
 				return;
@@ -359,11 +363,17 @@ void convertShortToVisibleChar(unsigned short c, unsigned char *ch, unsigned cha
 				*ch = 0x1f;
 				return;
 			case 0x25c0:
-				*ch = 0x7e;
-				return;
+				if (!chio.fullAscii) {
+					*ch = 0x7e;
+					return;
+				}
+				break;
 			case 0x25b6:
-				*ch = 0x7f;
-				return;
+				if (!chio.fullAscii) {
+					*ch = 0x7f;
+					return;
+				}
+				break;
 			default:
 				break;
 		}
@@ -493,21 +503,33 @@ void convertShortToVisibleChar(unsigned short c, unsigned char *ch, unsigned cha
 				*ch = 0x1f;
 				return;
 			case 0x2666: // diamond
-				*ch = 0x60;
-				return;
+				if (!chio.fullAscii) {
+					*ch = 0x60;
+					return;
+				}
+				break;
 			case 0x2660: //spade
-				*ch = 0x7b;
-				return;
+				if (!chio.fullAscii) {
+					*ch = 0x7b;
+					return;
+				}
+				break;
 			case 0x2551:
 			case 0x2502:
 				*ch = 0x7c; // vertical bar
 				return;
 			case 0x25c0:
-				*ch = 0x7e;
-				return;
+				if (!chio.fullAscii) {
+					*ch = 0x7e;
+					return;
+				}
+				break;
 			case 0x25b6:
-				*ch = 0x7f;
-				return;
+				if (!chio.fullAscii) {
+					*ch = 0x7f;
+					return;
+				}
+				break;
 			case 0x258a:
 				*ch = 0x02;
 				*attrib = 0x80;
@@ -560,7 +582,7 @@ void convertShortToVisibleChar(unsigned short c, unsigned char *ch, unsigned cha
 				if (chio.fullAscii) {
 					*ch = 0x7f;
 				} else {
-					*ch = 0x20;
+					*ch = ' ' 
 					*attrib = 0x80;
 				}
 				return;
@@ -568,8 +590,8 @@ void convertShortToVisibleChar(unsigned short c, unsigned char *ch, unsigned cha
 				break;
 		}
 	}
-	*ch = ' '; // inverse space for undrawable
-	*attrib = 0x80;
+	*ch = ERRCHAR;
+	*attrib = ERRATTRIB;
 }
 void debugCh(unsigned char c)
 {
@@ -876,11 +898,11 @@ void handleInput(unsigned char *err)
 }
 
 
-static const unsigned char lCurly[8] =  {0x07, 0x18, 0x18, 0x70, 0x18, 0x18, 0x07, 0x00};
-static const unsigned char rCurly[8] =  {0x70, 0x18, 0x18, 0x0e, 0x18, 0x18, 0x70, 0x00};
-static const unsigned char tilda[8] =   {0x00, 0x3d, 0x6e, 0x00, 0x00, 0x00, 0x00, 0x00};
-static const unsigned char bapost[8] =  {0x30, 0x18, 0x0c, 0x00, 0x00, 0x00, 0x00, 0x00};
-static const unsigned char hashBox[8] = {0x00, 0x54, 0x2a, 0x54, 0x2a, 0x54, 0x2a, 0x00};
+static unsigned char lCurly[8] =  {0x07, 0x18, 0x18, 0x70, 0x18, 0x18, 0x07, 0x00};
+static unsigned char rCurly[8] =  {0x70, 0x18, 0x18, 0x0e, 0x18, 0x18, 0x70, 0x00};
+static unsigned char tilda[8] =   {0x00, 0x3d, 0x6e, 0x00, 0x00, 0x00, 0x00, 0x00};
+static unsigned char bapost[8] =  {0x30, 0x18, 0x0c, 0x00, 0x00, 0x00, 0x00, 0x00};
+static unsigned char hashBox[8] = {0x00, 0x54, 0x2a, 0x54, 0x2a, 0x54, 0x2a, 0x00};
 
 void memCopy(unsigned char *top, const unsigned char *fromp, unsigned short len)
 {
@@ -893,14 +915,24 @@ void memClear(unsigned char *top, unsigned short len)
 }
 
 
-void initAscii(unsigned char fontBase) {
+void copyChar(unsigned char *top, unsigned char to, unsigned char *from, void(*copy)(unsigned char, unsigned char *))
+{
+	if (copy)(copy)(to, from);
+	else memcpy(top + ((unsigned short)to << 3), from, 8);
+}
+
+void initAscii(unsigned char fontBase, void(*copy)(unsigned char, unsigned char *)) {
 	unsigned char *top  = (unsigned char *)(fontBase << 8);
-	memCopy( top,  (unsigned char *) (detect.chbas <<8), 128 * 8);
-	memCopy(&top[96 * 8], bapost, 8);
-	memCopy(&top[123 * 8], lCurly, 8);
-	memCopy(&top[125 * 8], rCurly, 8);
-	memCopy(&top[126 * 8], tilda, 8);
-	memCopy(&top[127 * 8], hashBox, 8);
+	unsigned char *fromP = (unsigned char *) (detect.chbas <<8);
+	unsigned char n;
+	for (n = 0;n<128;n++) {
+		copyChar(top, n, &fromP[n<<3], copy);
+	}
+	copyChar(top, 96, bapost, copy);
+	copyChar(top, 123, lCurly, copy);
+	copyChar(top, 125, rCurly, copy);
+	copyChar(top, 126, tilda, copy);
+	copyChar(top, 127, hashBox, copy);
 	setFullAscii(1);
 }
 
