@@ -37,6 +37,7 @@ jferror:
 	.export _vbxeData
 	.export _vbxeReadAddr
 	.export _readVBXE
+	.export _ASMEND
 _vbxeData:
 	.byte 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0
 	.byte 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0
@@ -73,3 +74,4 @@ readVbxeAddr:
 	jsr writememac
 	tya
 	rts
+_ASMEND:

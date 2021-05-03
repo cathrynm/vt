@@ -290,7 +290,8 @@ void initVbxe(void)
 {
     unsigned char err = ERR_NONE;
     unsigned char y;
-    vbxe.bankTop = (unsigned char *)0x2000; // Must be 0x1000 boundary
+    vbxe.bankTop = (unsigned char *) (((unsigned short)ASMEND + 0xfff) & 0xf000);  // VBXE needs to start on 0x1000 boundary above ASMEND
+    OS.stack[0] = ((unsigned short)vbxe.bankTop) >> 8;
     OS.iocb[6].buffer = "S2:";
     OS.iocb[6].buflen = strlen("S:");
     OS.iocb[6].command = 96; // VBXE Bios detect

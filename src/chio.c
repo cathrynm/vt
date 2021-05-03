@@ -582,7 +582,7 @@ void convertShortToVisibleChar(unsigned short c, unsigned char *ch, unsigned cha
 				if (chio.fullAscii) {
 					*ch = 0x7f;
 				} else {
-					*ch = ' ' 
+					*ch = ' ';
 					*attrib = 0x80;
 				}
 				return;

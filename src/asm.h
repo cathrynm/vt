@@ -11,3 +11,4 @@ extern void *vbxeAddr, *vbxeReadAddr;
 extern void *memacReg;
 extern unsigned char SHFLOK_save;
 extern unsigned char LMARGN_save;
+extern unsigned char ASMEND[1]; // VBXE Swap area must be above this address
