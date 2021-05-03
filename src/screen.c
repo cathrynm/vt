@@ -205,12 +205,12 @@ void cursorUpdate(unsigned char x, unsigned char y)
 	switch(detect.videoMode) {
 #if XEP_ON
 		case 'X':
-			cursorUpdateXep(x, y);
+			cursorUpdateXep(x + OS.lmargn, y);
 			break;
 #endif
 #if VBXE_ON
 		case 'V':
-			cursorUpdateVbxe(x, y);
+			cursorUpdateVbxe(x + OS.lmargn, y);
 			break;
 #endif
 #if CIO_ON || DIRECT_ON || RAWCON_ON
