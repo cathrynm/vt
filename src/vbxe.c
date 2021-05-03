@@ -144,6 +144,8 @@ typedef struct {
     VBXE_REGS *regs;
     unsigned char cursorX, cursorY, cursorOn, cursorColor;
     unsigned char bios;
+    unsigned short XDL_ADR;
+    unsigned char XDL_ADR2;
 } vbxeStruct;
 
 vbxeStruct vbxe;
@@ -285,21 +287,51 @@ void copyCharVbxe(unsigned char ch, unsigned char *from)
     vbxeWriteFrom(VBXE_FONTMEM + ((unsigned short) ch << 3), from, VBXE_FONTBANK, 8);
 }
 
+#define VBXEBIOS_DETECT 96
+#define VBXEBIOS_SCROLLUP 97
+#define VBXEBIOS_SCROLLDOWN 98
+#define VBXEBIOS_CLEARLINE 99
+#define VBXEBIOS_PALETTERESET 100
+#define VBXEBIOS_PALETTEWRITE 101
+#define VBXEBIOS_PALETTEREAD 102
+#define VBXEBIOS_FONTLOAD 103
+#define VBXEBIOS_PUTCHAR 105
+#define VBXEBIOS_GETXDL 107
+#define VBXEBIOS_GETVCTRL 108
+#define VBXEBIOS_ALLOC 109
+#define VBXEBIOS_TEXTFAST 111
+#define VBXEBIOS_TEXTFASTOFF 112
+#define VBXEBIOS_PALETTELOADSWITHFONT 113
+#define VBXEBIOS_GETCHARCELL 114
+
 
 void initVbxe(void)
 {
     unsigned char err = ERR_NONE;
     unsigned char y;
     vbxe.bankTop = (unsigned char *) (((unsigned short)ASMEND + 0xfff) & 0xf000);  // VBXE needs to start on 0x1000 boundary above ASMEND
-    OS.stack[0] = ((unsigned short)vbxe.bankTop) >> 8;
     OS.iocb[6].buffer = "S2:";
     OS.iocb[6].buflen = strlen("S:");
-    OS.iocb[6].command = 96; // VBXE Bios detect
+    OS.iocb[6].command = VBXEBIOS_DETECT;
     OS.iocb[6].aux1 = 0;
     OS.iocb[6].aux2 = 0;
     cio(6);
     iocbErrUpdate(6, &err);
-    vbxe.bios = ((err == ERR_NONE) && (OS.iocb[6].spare == 96));
+    vbxe.bios = ((err == ERR_NONE) && (OS.ziocb.spare == 96));
+    if (vbxe.bios) {
+        OS.iocb[6].buffer = "S2:";
+        OS.iocb[6].buflen = strlen("S:");
+        OS.iocb[6].command = VBXEBIOS_GETXDL;
+        OS.iocb[6].aux1 = 0;
+        OS.iocb[6].aux2 = 0;
+        cio(6);
+        iocbErrUpdate(6, &err);
+        if (err != ERR_NONE) vbxe.bios = 0;
+        else {
+            vbxe.XDL_ADR = * (unsigned short *) &OS.iocb[6].aux3;
+            vbxe.XDL_ADR2 = OS.iocb[6].aux5;
+        }
+    }
     vbxe.regs->MEMAC_CONTROL = (((unsigned short)vbxe.bankTop) >> 8) | 0x8 | (VBXE_BANKSHIFT - 12);       //  0x8 = CPU 
     initAscii(detect.fullChbas, copyCharVbxe);
     vbxeWriteFrom(VBXE_XDLMEM, displayList, VBXE_XDLBANK, sizeof(displayList));
@@ -320,7 +352,7 @@ void restoreVbxe(void)
 {
     vbxe.regs->MEMAC_CONTROL = vbxe.MEMAC_CONTROL;
     vbxe.regs->MEMAC_BANK_SEL = vbxe.MEMAC_BANK_SEL;
-    if (vbxe.sdmctl) {
+    if (!vbxe.bios) {
         vbxe.regs->VIDEO_CONTROL = 0;
         OS.sdmctl = vbxe.sdmctl;
     } else  {
@@ -329,9 +361,8 @@ void restoreVbxe(void)
 // Screen is at 7ec00  // 7e
 // Character set is at 7c000-7c800 7c
         vbxe.regs->VIDEO_CONTROL = 0x05;
-        vbxe.regs->XDL_ADR0 = 0x30; 
-        vbxe.regs->XDL_ADR1 = 0xe1;
-        vbxe.regs->XDL_ADR2 = 0x07;
+        vbxe.regs->XDL_ADR = vbxe.XDL_ADR; 
+        vbxe.regs->XDL_ADR2 = vbxe.XDL_ADR2;
     }
 }
 
