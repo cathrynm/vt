@@ -6,6 +6,7 @@ typedef struct {
 	rawTabStruct *rawTab;
 	unsigned char memoryIndex;
 	unsigned char charCellX, charCellY;
+	unsigned char cursorX, cursorY, cursorOn, cursorChar;
 } rawConStruct;
 
 rawConStruct rawcon;
@@ -145,7 +146,7 @@ unsigned char supportsCharacterSet(void)
 void drawCharsAtRawCon(unsigned char *buffer, unsigned char bufferLen)
 {
 	if ((screenX.cursX >= OS.colcrs) && (screenX.cursX < OS.colcrs + bufferLen) && (OS.rowcrs == screenX.cursY)) {
-		OS.oldchr = buffer[screenX.cursX - OS.colcrs];
+		cursorHide();
 	}
 	for (;bufferLen--;) {
 		(rawcon.rawTab->putChar)(*buffer++);
@@ -157,49 +158,31 @@ void deleteLineRawCon(unsigned char topY, unsigned char bottomY)
 {
 	cursorHide();
 	if (bottomY > topY) {
-		OS.ziocb.command = 97;
+		OS.ziocb.command = VBXEBIOS_SCROLLUP;
 		OS.ziocb.aux2 = topY;
 		OS.botscr = bottomY + 1;
 		(rawcon.rawTab->xio)();
 		OS.botscr = SCREENLINES;
-		if ((screenX.cursY > topY) && (screenX.cursY <= bottomY)) {
-			OS.colcrs = screenX.cursX;OS.rowcrs = screenX.cursY-1;
-			(rawcon.rawTab->putChar)(OS.oldchr);
-		}
 	}
 
-	OS.ziocb.command = 99;
+	OS.ziocb.command = VBXEBIOS_CLEARLINE;
 	OS.ziocb.aux2 = bottomY;
 	(rawcon.rawTab->xio)();
-	if (bottomY == screenX.cursY)OS.oldchr = ' ';
-	else {
-		OS.colcrs = screenX.cursX;OS.rowcrs = screenX.cursY;
-		OS.oldchr = (rawcon.rawTab->getChar)();
-	}
 }
 
 void insertLineRawCon(unsigned char topY, unsigned char bottomY)
 {
 	cursorHide();
 	if (bottomY > topY) {
-		OS.ziocb.command = 98;
+		OS.ziocb.command = VBXEBIOS_SCROLLDOWN;
 		OS.ziocb.aux2 = topY;
 		OS.botscr = bottomY + 1;
 		(rawcon.rawTab->xio)();
 		OS.botscr = SCREENLINES;
-		if ((screenX.cursY >= topY) && (screenX.cursY < bottomY)) {
-			OS.colcrs = screenX.cursX;OS.rowcrs = screenX.cursY+1;
-			(rawcon.rawTab->putChar)(OS.oldchr);
-		}
 	}
-	OS.ziocb.command = 99;
+	OS.ziocb.command = VBXEBIOS_CLEARLINE;
 	OS.ziocb.aux2 = topY;
 	(rawcon.rawTab->xio)();
-	if (topY == screenX.cursY)OS.oldchr = ' ';
-	else {
-		OS.colcrs = screenX.cursX;OS.rowcrs = screenX.cursY;
-		OS.oldchr = (rawcon.rawTab->getChar)();
-	}
 }
 
 void initRawCon(void)
@@ -218,6 +201,65 @@ void initRawCon(void)
 			setFullAscii(0);
     	}
 	}
+}
+
+void cursorHideRawCon(void)
+{
+    if (!rawcon.cursorOn)return;
+    OS.colcrs = rawcon.cursorX;
+    OS.rowcrs = rawcon.cursorY;
+    (rawcon.rawTab->putChar)(rawcon.cursorChar);
+    rawcon.cursorOn = 0;
+}
+
+void cursorUpdateRawCon(unsigned char x, unsigned char y)
+{
+    if (rawcon.cursorOn) {
+        if ((x == rawcon.cursorX) && (y == rawcon.cursorY))return;
+        cursorHideRawCon();
+    }
+    OS.colcrs = x;OS.rowcrs = y;
+    rawcon.cursorChar = (rawcon.rawTab->getChar)();
+    (rawcon.rawTab->putChar)(rawcon.cursorChar ^ 0x80);
+    rawcon.cursorX = x;
+    rawcon.cursorY = y;
+    rawcon.cursorOn = 1;
+}
+
+void insertCharRawCon(unsigned char x, unsigned char y, unsigned char len)
+{
+	unsigned char n, c;
+    if (y == rawcon.cursorY)cursorHide();
+    OS.rowcrs = y;
+    if (x + len >= OS.rmargn)len = OS.rmargn - x;
+    if (len > 0) {
+    	for (n = len - 1;;n--) {
+    		OS.colcrs = x + n;
+    		c = (rawcon.rawTab->getChar)();
+    		OS.colcrs++;
+    		(rawcon.rawTab->putChar)(c);
+    		if (!n)break;
+    	}
+    }
+    OS.colcrs = x;
+    (rawcon.rawTab->putChar)(' ');
+}
+
+void deleteCharRawCon(unsigned char x, unsigned char y, unsigned char len)
+{
+	unsigned char n, c;
+    if (y == rawcon.cursorY)cursorHide();
+    OS.rowcrs = y;
+    if (len > 1) {
+    	for (n = 0;n < len - 1;n++) {
+    		OS.colcrs = x + 1 + n;
+    		c = (rawcon.rawTab->getChar)();
+    		OS.colcrs--;
+    		(rawcon.rawTab->putChar)(c);
+		}
+    }
+    OS.colcrs = x + len - 1;
+    (rawcon.rawTab->putChar)(' ');
 }
 
 #endif

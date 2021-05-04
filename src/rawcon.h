@@ -20,5 +20,9 @@ void initRawCon(void);
 void deleteLineRawCon(unsigned char topY, unsigned char bottomY);
 void insertLineRawCon(unsigned char topY, unsigned char bottomY);
 unsigned char supportsCharacterSet(void);
+void cursorHideRawCon(void);
+void cursorUpdateRawCon(unsigned char x, unsigned char y);
+void insertCharRawCon(unsigned char x, unsigned char y, unsigned char len);
+void deleteCharRawCon(unsigned char x, unsigned char y, unsigned char len);
 
 #endif

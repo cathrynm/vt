@@ -183,7 +183,7 @@ void cursorHide(void)
 #endif
 #if RAWCON_ON
 		case 'R':
-			bumpCursor();
+			cursorHideRawCon();
 			break;
 #endif
 		default:
@@ -211,6 +211,11 @@ void cursorUpdate(unsigned char x, unsigned char y)
 #if VBXE_ON
 		case 'V':
 			cursorUpdateVbxe(x + OS.lmargn, y);
+			break;
+#endif
+#if RAWCON_ON
+		case 'R':
+			cursorUpdateRawCon(x + OS.lmargn, y);
 			break;
 #endif
 #if CIO_ON || DIRECT_ON || RAWCON_ON
@@ -452,7 +457,12 @@ void drawInsertChar(unsigned char x, unsigned char y, unsigned char color)
 			insertCharVbxe(x + OS.lmargn, y, color);
 			break;
 #endif
-#if CIO_ON || DIRECT_ON || RAWCON_ON
+#if RAWCON_ON
+		case 'R':
+			insertCharRawCon(x + OS.lmargn, y, screenX.lineLength[y] - x);
+			break;
+#endif
+#if CIO_ON || DIRECT_ON
 		default:
 			OS.dspflg = 0;
 			OS.rowcrs = y;
@@ -484,7 +494,12 @@ void drawDeleteChar(unsigned char x, unsigned char y, unsigned char color)
 			deleteCharVbxe(x + OS.lmargn, y, screenX.lineLength[y] - x, color);
 			break;
 #endif
-#if CIO_ON || DIRECT_ON || RAWCON_ON
+#if RAWCON_ON
+		case 'R':
+			deleteCharRawCon(x + OS.lmargn, y, screenX.lineLength[y] - x);
+			break;
+#endif
+#if CIO_ON || DIRECT_ON
 		default:
 			OS.dspflg = 0;
 			OS.rowcrs = y;
