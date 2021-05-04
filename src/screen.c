@@ -129,6 +129,11 @@ void screenRestore(void)
 			restoreVbxe();
 			break;
 #endif
+#if RAWCON_ON
+		case 'R':
+			restoreRawCon();
+			break;
+#endif
 		default:break;
 	}
 	OS.dspflg = 0;

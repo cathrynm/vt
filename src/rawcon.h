@@ -24,5 +24,6 @@ void cursorHideRawCon(void);
 void cursorUpdateRawCon(unsigned char x, unsigned char y);
 void insertCharRawCon(unsigned char x, unsigned char y, unsigned char len);
 void deleteCharRawCon(unsigned char x, unsigned char y, unsigned char len);
+void restoreRawCon(void);
 
 #endif

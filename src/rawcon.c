@@ -140,6 +140,9 @@ unsigned char supportsCharacterSet(void)
 {
 	if (rawcon.charCellY != 8) return 0;
 	if (rawcon.charCellX == 8) return 1;
+#if FONT45BIT
+	if ((rawcon.charCellX == 4) || (rawcon.charCellX == 5)) return 1;
+#endif
 	return 0;
 }
 
@@ -185,11 +188,57 @@ void insertLineRawCon(unsigned char topY, unsigned char bottomY)
 	(rawcon.rawTab->xio)();
 }
 
+#if FONT45BIT
+void copy4Char(unsigned char c, unsigned char *from)
+{
+	unsigned char *top  = (unsigned char *)(((unsigned short)detect.fullChbas) << 8) + (((unsigned short)c) << 3);
+	unsigned char n, ch, ct, bit, bitt;
+	for (n = 0;n<8;n++) {
+		ch = *from++;
+		ct = 0;
+		for (bit = 7, bitt=7;bitt != 3;bit -= 2, bitt--) {
+			if (ch & (1<<bit)) ct |= 1<<bitt;
+		}
+		*top++ = ct;
+	}
+}
+
+void copy5Char(unsigned char c, unsigned char *from)
+{
+	unsigned char *top  = (unsigned char *)(detect.fullChbas << 8) + (((unsigned short)c) << 3);
+	unsigned char n, ch, ct, bit, bitt;
+	for (n = 0;n<8;n++) {
+		ch = *from++;
+		ct = 0;
+		for (bit = 6, bitt=7;bitt != 2;bit--, bitt--) {
+			if (bit == 4)bit--;
+			if (ch & (1<<bit)) ct |= 1<<bitt;
+		}
+		*top++ = ct;
+	}
+}
+#endif
+
 void initRawCon(void)
 {
 	unsigned char err = ERR_NONE;
 	if (detect.fullChbas) {
-		initAscii(detect.fullChbas, NULL);
+		void(*copyChar)(unsigned char, unsigned char *) = NULL;
+		switch(rawcon.charCellX) {
+#if FONT45BIT
+			case 4:
+				copyChar = copy4Char;
+				break;
+			case 5:
+				copyChar = copy5Char;
+				break;
+#endif
+			case 8:
+				break;
+			default:
+				return;
+		}
+		initAscii(detect.fullChbas, copyChar);
 		OS.iocb[6].buffer = "S2:";
    		OS.iocb[6].buflen = strlen("S2:");
  		OS.iocb[6].command = VBXEBIOS_FONTLOAD;
@@ -199,7 +248,15 @@ void initRawCon(void)
     	iocbErrUpdate(6, &err);
     	if (err != ERR_NONE) {
 			setFullAscii(0);
+			detect.fullChbas = 0;
     	}
+	}
+}
+
+void restoreRawCon(void)
+{
+	if (detect.fullChbas) {
+		// How to go back to the original font
 	}
 }
 

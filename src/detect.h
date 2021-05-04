@@ -4,7 +4,7 @@
 void initDetect(void);
 typedef struct {
 	unsigned char videoMode; // 'X', 'S', 'A', 'L'
-	unsigned char chbas, fullChbas;
+	unsigned char chbas, fullChbas, origChbas;
 	unsigned char osType;
 	unsigned char hasColor;
 } detectStruct;
