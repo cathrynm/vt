@@ -51,48 +51,51 @@ unsigned char closeChio(void)
 // Note, only need to check ones that go past 16 bits here.  These all get processed as drawable, not controls.
 void convertLongToVisibleChar(unsigned long c, unsigned char *ch, unsigned char *attrib)
 {
-	if (0) {
+	switch(screenX.charSet) {
 #if XEP_ON
-	} else if (isXep80Internal()) {
-		switch(c) {
-			default:
-				break;
-		}
+		case 'X':
+			switch(c) {
+				default:
+					break;
+			}
+			break;
 #endif
 #if ATARIINTERNATIONAL
-	} else if (isIntl()) { // international 
-		switch(c) {
-			case 0x1F8B0:
-				if (!chio.fullAscii) {
-					*ch = 0x7d;
-					*attrib = 0;
-					return;
-				}
-				break;
-			default:
-				break;
-		}
+		case 'I':
+			switch(c) {
+				case 0x1F8B0:
+					if (!chio.fullAscii) {
+						*ch = 0x7d;
+						*attrib = 0;
+						return;
+					}
+					break;
+				default:
+					break;
+			}
+			break;
 #endif
-	} else {
-		switch(c) {
-			case 0x1FB87: // someone got these into UTF8 for Atascii, so going to use them
-				*ch = 2;
-				*attrib = 0;
-				return;
-			case 0x1FB82:
-				*ch = 0xd;
-				*attrib = 0;
-				return;
-			case 0x1F8B0:
-				if (!chio.fullAscii) {
-					*ch = 0x7d;
+		case 'A':
+			switch(c) {
+				case 0x1FB87: // someone got these into UTF8 for Atascii, so going to use them
+					*ch = 2;
 					*attrib = 0;
 					return;
-				}
-				break;
-			default:
-				break;
-		}
+				case 0x1FB82:
+					*ch = 0xd;
+					*attrib = 0;
+					return;
+				case 0x1F8B0:
+					if (!chio.fullAscii) {
+						*ch = 0x7d;
+						*attrib = 0;
+						return;
+					}
+					break;
+				default:
+					break;
+			}
+			break;
 	}
 	*ch = ERRCHAR;
 	*attrib = ERRATTRIB;
@@ -144,451 +147,454 @@ void convertAsciiToVisibleChar(unsigned char *ch, unsigned char *attrib)
 void convertShortToVisibleChar(unsigned short c, unsigned char *ch, unsigned char *attrib)
 {
 	*attrib = 0;
-	if (0) {
+	switch(screenX.charSet) {
 #if XEP_ON
-	} else if (isXep80Internal()) {
-		switch(c) {
-			case 0x0132:
-	            *ch = XEPICH_CIJ;
-	            return;
-	        case 0x21e7:
-	            *ch = XEPICH_UPARROW;
-	            return;
-	        case 0x00f8:
-	            *ch = XEPICH_0SLASH;
-	            return;
-	        case 0x00a3:
-	            *ch = XEPICH_POUND;
-				return;
-			case 0x29bb:  // what is this strange character?  #4 of XEP80 internal set. Calling it X over circle.
-			    *ch = XEPICH_XTHING;
-				return;
-			case 0x00a8: // diaeresis?
-	            *ch = XEPICH_OTHERQUOTE;
-				return;
-			case 0x00b0: // degree symbol
-	            *ch = XEPICH_SMALLPLUS;
-				return;
-			case 0x00a7:
-	            *ch = XEPICH_SQUIGGLE;
-				return;
-			case 0x00c7:
-	            *ch = XEPICH_CTAIL;
-				return;
-			case 0x00D1:
-	            *ch = XEPICH_CNTILDA;
-				return;
-			case 0x00c6:
-	            *ch = XEPICH_CAE;
-				return;
-			case 0x00c4:
-	            *ch = XEPICH_CADOTS;
-				return;
-			case 0x00d6:
-	            *ch = XEPICH_CODOTS;
-				return;
-			case 0x00c5:
-	            *ch = XEPICH_CADOT;
-				return;
-			case 0x00DC:
-	            *ch = XEPICH_CUDOTS;
-				return;
-			case 0x0152:
-	            *ch = XEPICH_COE;
-				return;
-			case 0x0133:
-	            *ch = XEPICH_LIJ;
-				return;
-			case 0x00df:
-	            *ch = XEPICH_BETA;
-				return;
-			case 0x00e0:
-	            *ch = XEPICH_LADOTLEFT;
-				return;
-			case 0x00e8:
-	            *ch = XEPICH_LEDOTLEFT;
-				return;
-			case 0x00ec:
-	            *ch = XEPICH_LIDOTLEFT;
-				return;
-			case 0x00ef:
-	            *ch = XEPICH_LIDOTS;
-				return;
-			case 0x00f9:
-	            *ch = XEPICH_LUDOTLEFT;
-				return;
-			case 0x00e9:
-	            *ch = XEPICH_LEDOTRIGHT;
-				return;
-			case 0x00e7:
-	            *ch = XEPICH_LCTAIL;
-				return;
-			case 0x00f1:
-	            *ch = XEPICH_LNTILDA;
-				return;
-			case 0x00e6:
-	            *ch = XEPICH_LAE;
-				return;
-			case 0x00e4:
-	            *ch = XEPICH_LADOTS;
-				return;
-			case 0x00f6:
-	            *ch = XEPICH_LODOTS;
-				return;
-			case 0x00e5:
-	            *ch = XEPICH_LADOT;
-				return;
-			case 0x00fc:
-	            *ch = XEPICH_LUDOTS;
-				return;
-			case 0x0153:
-	            *ch = XEPICH_LOE;
-	            return;
-			default:break;
-		}
+		case 'X':
+			switch(c) {
+				case 0x0132:
+		            *ch = XEPICH_CIJ;
+		            return;
+		        case 0x21e7:
+		            *ch = XEPICH_UPARROW;
+		            return;
+		        case 0x00f8:
+		            *ch = XEPICH_0SLASH;
+		            return;
+		        case 0x00a3:
+		            *ch = XEPICH_POUND;
+					return;
+				case 0x29bb:  // what is this strange character?  #4 of XEP80 internal set. Calling it X over circle.
+				    *ch = XEPICH_XTHING;
+					return;
+				case 0x00a8: // diaeresis?
+		            *ch = XEPICH_OTHERQUOTE;
+					return;
+				case 0x00b0: // degree symbol
+		            *ch = XEPICH_SMALLPLUS;
+					return;
+				case 0x00a7:
+		            *ch = XEPICH_SQUIGGLE;
+					return;
+				case 0x00c7:
+		            *ch = XEPICH_CTAIL;
+					return;
+				case 0x00D1:
+		            *ch = XEPICH_CNTILDA;
+					return;
+				case 0x00c6:
+		            *ch = XEPICH_CAE;
+					return;
+				case 0x00c4:
+		            *ch = XEPICH_CADOTS;
+					return;
+				case 0x00d6:
+		            *ch = XEPICH_CODOTS;
+					return;
+				case 0x00c5:
+		            *ch = XEPICH_CADOT;
+					return;
+				case 0x00DC:
+		            *ch = XEPICH_CUDOTS;
+					return;
+				case 0x0152:
+		            *ch = XEPICH_COE;
+					return;
+				case 0x0133:
+		            *ch = XEPICH_LIJ;
+					return;
+				case 0x00df:
+		            *ch = XEPICH_BETA;
+					return;
+				case 0x00e0:
+		            *ch = XEPICH_LADOTLEFT;
+					return;
+				case 0x00e8:
+		            *ch = XEPICH_LEDOTLEFT;
+					return;
+				case 0x00ec:
+		            *ch = XEPICH_LIDOTLEFT;
+					return;
+				case 0x00ef:
+		            *ch = XEPICH_LIDOTS;
+					return;
+				case 0x00f9:
+		            *ch = XEPICH_LUDOTLEFT;
+					return;
+				case 0x00e9:
+		            *ch = XEPICH_LEDOTRIGHT;
+					return;
+				case 0x00e7:
+		            *ch = XEPICH_LCTAIL;
+					return;
+				case 0x00f1:
+		            *ch = XEPICH_LNTILDA;
+					return;
+				case 0x00e6:
+		            *ch = XEPICH_LAE;
+					return;
+				case 0x00e4:
+		            *ch = XEPICH_LADOTS;
+					return;
+				case 0x00f6:
+		            *ch = XEPICH_LODOTS;
+					return;
+				case 0x00e5:
+		            *ch = XEPICH_LADOT;
+					return;
+				case 0x00fc:
+		            *ch = XEPICH_LUDOTS;
+					return;
+				case 0x0153:
+		            *ch = XEPICH_LOE;
+		            return;
+				default:break;
+			}
+			break;
 #endif
 #if ATARIINTERNATIONAL
-	} else if (isIntl()) { // international 
-		switch(c) {
-			case 0x00a0:
-				*ch = ' ';
-				return;
-			case 0x00e1: // a 
-				*ch = 0;
-				return;
-			case 0x00f9: // u
-				*ch = 1;
-				return;
-			case 0x00d1: // N
-				*ch = 2;
-				return;
-			case 0x00c9:  // E
-				*ch = 3;
-				return;
-			case 0x00e7: // c
-				*ch = 4;
-				return;
-			case 0x00f4: // o
-				*ch = 5;
-				return;
-			case 0x00f2: // o
-				*ch = 6;
-				return;
-			case 0x00ec: // i
-				*ch = 7;
-				return;
-
-			case 0x00a3: // L
-				*ch = 8;
-				return;
-			case 0x00ef: // i
-				*ch = 9;
-				return;
-			case 0x00fc: // u
-				*ch = 0xa;
-				return;
-			case 0x00e4: // a
-				*ch = 0xb;
-				return;
-			case 0x00d6: // O
-				*ch = 0xc;
-				return;
-			case 0x00fa: // u
-				*ch = 0xd;
-				return;
-			case 0x00f3: // o
-				*ch = 0xe;
-				return;
-			case 0x00f6: // o
-				*ch = 0xf;
-				return;
-
-			case 0x00Dc: // U
-				*ch = 0x10;
-				return;
-			case 0x00e2: // a
-				*ch = 0x11;
-				return;
-			case 0x00fb: // u
-				*ch = 0x12;
-				return;
-			case 0x00ee: // i
-				*ch = 0x13;
-				return;
-			case 0x00e9: // e
-				*ch = 0x14;
-				return;
-			case 0x00e8: // e
-				*ch = 0x15;
-				return;
-			case 0x00f1: //n 
-				*ch = 0x16;
-				return;
-			case 0x00ea: // e
-				*ch = 0x17;
-				return;
-
-			case 0x00e5: // a
-				*ch = 0x18;
-				return;
-			case 0x0032: // a
-				*ch = 0x19;
-				return; 
-			case 0x00c5: // A
-				*ch = 0x1a;
-				return;
-
-			case 0x00a1: // !
-				if (!chio.fullAscii) {
-					*ch = 0x60;
-					return;
-				}
-				break;
-			case 0x00c4: // A
-				*ch = 0xfb;
-				return;
-			case 0x241B:
-				*ch = 0x1b;
-				return;
-			case 0x2191:
-				*ch = 0x1c;
-				return;
-			case 0x2193:
-				*ch = 0x1d;
-				return;
-			case 0x2190:
-				*ch = 0x1e;
-				return;
-			case 0x2192:
-				*ch = 0x1f;
-				return;
-			case 0x25c0:
-				if (!chio.fullAscii) {
-					*ch = 0x7e;
-					return;
-				}
-				break;
-			case 0x25b6:
-				if (!chio.fullAscii) {
-					*ch = 0x7f;
-					return;
-				}
-				break;
-			default:
-				break;
-		}
-#endif
-	} else {
-		switch(c) {
-			case 0x00a0:
-				*ch = ' ';
-				return;
-
-			case 0x2665: // cntrl characters
-				*ch = 0;
-				return;
-			case 0x251C: // VBar+Right
-			case 0x255e:
-			case 0x255f:
-			case 0x2560:
-				*ch = 1;
-				return;
-			case 0x255d:
-			case 0x255c:
-			case 0x255b:
-			case 0x2518: // up left corner
-				*ch = 3;
-				return;
-			case 0x2561:
-			case 0x2562:
-			case 0x2563:
-			case 0x2524: // VBar + left
-				*ch = 4;
-				return;
-			case 0x2556:
-			case 0x2555:
-			case 0x2557:
-			case 0x2510: // down-left corner
-				*ch = 5;
-				return;
-			case 0x2571:
-				*ch = 6;
-				return;
-			case 0x2572:
-				*ch = 7;
-				return;
-			case 0x25E2:
-				*ch = 8;
-				return;
-			case 0x2597:
-				*ch = 9;
-				return;
-			case 0x25E3:
-				*ch = 0xa;
-				return;
-			case 0x259D:
-				*ch = 0xb;
-				return;
-			case 0x2598:
-				*ch = 0xc;
-				return;
-			case 0x2582:
-				*ch = 0xe;
-				return;
-			case 0x2596:
-				*ch = 0xf;
-				return;
-			case 0x2663:
-				*ch = 0x10;
-				return;
-			case 0x2552:
-			case 0x2553:
-			case 0x2554:
-			case 0x250C: // down right corner
-				*ch = 0x11;
-				return;
-			case 0x2550: // double horizontal bar
-			case 0x2500: // horizontal bar
-				*ch = 0x12;
-				return;
-			case 0x253C:
-			case 0x256c:
-			case 0x256b:
-			case 0x256a:
-				*ch = 0x13; // cross
-				return;
-			case 0x2022:
-				*ch = 0x14;
-				return;
-			case 0x2584:
-				*ch = 0x15;
-				return;
-			case 0x258E:
-				*ch = 0x16; // vbar left
-				return;
-			case 0x252C: // HBAR Down
-			case 0x2566:
-			case 0x2564:
-			case 0x2565:
-				*ch = 0x17;
-				return;
-			case 0x2534: // hbar UP
-			case 0x2569:
-			case 0x2567:
-			case 0x2568:
-				*ch = 0x18;
-				return;
-			case 0x258C:
-				*ch = 0x19;
-				return;
-			case 0x255a:
-			case 0x2558:
-			case 0x2559:
-			case 0x2514: // up right corner
-				*ch = 0x1a;
-				return;
-			case 0x241B:
-				*ch = 0x1b;
-				return;
-			case 0x2191:
-				*ch = 0x1c;
-				return;
-			case 0x2193:
-				*ch = 0x1d;
-				return;
-			case 0x2190:
-				*ch = 0x1e;
-				return;
-			case 0x2192:
-				*ch = 0x1f;
-				return;
-			case 0x2666: // diamond
-				if (!chio.fullAscii) {
-					*ch = 0x60;
-					return;
-				}
-				break;
-			case 0x2660: //spade
-				if (!chio.fullAscii) {
-					*ch = 0x7b;
-					return;
-				}
-				break;
-			case 0x2551:
-			case 0x2502:
-				*ch = 0x7c; // vertical bar
-				return;
-			case 0x25c0:
-				if (!chio.fullAscii) {
-					*ch = 0x7e;
-					return;
-				}
-				break;
-			case 0x25b6:
-				if (!chio.fullAscii) {
-					*ch = 0x7f;
-					return;
-				}
-				break;
-			case 0x258a:
-				*ch = 0x02;
-				*attrib = 0x80;
-				return;
-			case 0x25e4:
-				*ch = 0x08;
-				*attrib = 0x80;
-				return;
-			case 0x259b:
-				*ch = 0x09;
-				*attrib = 0x80;
-				return;
-			case 0x25e5:
-				*ch = 0x0a;
-				*attrib = 0x80;
-				return;
-			case 0x2599:
-				*ch = 0x0b;
-				*attrib = 0x80;
-				return;
-			case 0x259f:
-				*ch = 0x0c;
-				*attrib = 0x80;
-				return;
-			case 0x2586:
-				*ch = 0x0d;
-				*attrib = 0x80;
-				return;
-			case 0x259c:
-				*ch = 0x0f;
-				*attrib = 0x80;
-				return;
-
-			case 0x25d8:
-				*ch = 0x14;
-				*attrib = 0x80;
-				return;
-			case 0x2580:
-				*ch = 0x15;
-				*attrib = 0x80;
-				return;
-			case 0x2590:
-				*ch = 0x19;
-				*attrib = 0x80;
-				return;
-			case 0x2588:
-			case 0x2591:
-			case 0x2592:
-			case 0x2593:
-				if (chio.fullAscii) {
-					*ch = 0x7f;
-				} else {
+		case 'I':	
+			switch(c) {
+				case 0x00a0:
 					*ch = ' ';
+					return;
+				case 0x00e1: // a 
+					*ch = 0;
+					return;
+				case 0x00f9: // u
+					*ch = 1;
+					return;
+				case 0x00d1: // N
+					*ch = 2;
+					return;
+				case 0x00c9:  // E
+					*ch = 3;
+					return;
+				case 0x00e7: // c
+					*ch = 4;
+					return;
+				case 0x00f4: // o
+					*ch = 5;
+					return;
+				case 0x00f2: // o
+					*ch = 6;
+					return;
+				case 0x00ec: // i
+					*ch = 7;
+					return;
+
+				case 0x00a3: // L
+					*ch = 8;
+					return;
+				case 0x00ef: // i
+					*ch = 9;
+					return;
+				case 0x00fc: // u
+					*ch = 0xa;
+					return;
+				case 0x00e4: // a
+					*ch = 0xb;
+					return;
+				case 0x00d6: // O
+					*ch = 0xc;
+					return;
+				case 0x00fa: // u
+					*ch = 0xd;
+					return;
+				case 0x00f3: // o
+					*ch = 0xe;
+					return;
+				case 0x00f6: // o
+					*ch = 0xf;
+					return;
+
+				case 0x00Dc: // U
+					*ch = 0x10;
+					return;
+				case 0x00e2: // a
+					*ch = 0x11;
+					return;
+				case 0x00fb: // u
+					*ch = 0x12;
+					return;
+				case 0x00ee: // i
+					*ch = 0x13;
+					return;
+				case 0x00e9: // e
+					*ch = 0x14;
+					return;
+				case 0x00e8: // e
+					*ch = 0x15;
+					return;
+				case 0x00f1: //n 
+					*ch = 0x16;
+					return;
+				case 0x00ea: // e
+					*ch = 0x17;
+					return;
+
+				case 0x00e5: // a
+					*ch = 0x18;
+					return;
+				case 0x0032: // a
+					*ch = 0x19;
+					return; 
+				case 0x00c5: // A
+					*ch = 0x1a;
+					return;
+
+				case 0x00a1: // !
+					if (!chio.fullAscii) {
+						*ch = 0x60;
+						return;
+					}
+					break;
+				case 0x00c4: // A
+					*ch = 0xfb;
+					return;
+				case 0x241B:
+					*ch = 0x1b;
+					return;
+				case 0x2191:
+					*ch = 0x1c;
+					return;
+				case 0x2193:
+					*ch = 0x1d;
+					return;
+				case 0x2190:
+					*ch = 0x1e;
+					return;
+				case 0x2192:
+					*ch = 0x1f;
+					return;
+				case 0x25c0:
+					if (!chio.fullAscii) {
+						*ch = 0x7e;
+						return;
+					}
+					break;
+				case 0x25b6:
+					if (!chio.fullAscii) {
+						*ch = 0x7f;
+						return;
+					}
+					break;
+				default:
+					break;
+			}
+			break;
+#endif
+		case 'A':
+			switch(c) {
+				case 0x00a0:
+					*ch = ' ';
+					return;
+
+				case 0x2665: // cntrl characters
+					*ch = 0;
+					return;
+				case 0x251C: // VBar+Right
+				case 0x255e:
+				case 0x255f:
+				case 0x2560:
+					*ch = 1;
+					return;
+				case 0x255d:
+				case 0x255c:
+				case 0x255b:
+				case 0x2518: // up left corner
+					*ch = 3;
+					return;
+				case 0x2561:
+				case 0x2562:
+				case 0x2563:
+				case 0x2524: // VBar + left
+					*ch = 4;
+					return;
+				case 0x2556:
+				case 0x2555:
+				case 0x2557:
+				case 0x2510: // down-left corner
+					*ch = 5;
+					return;
+				case 0x2571:
+					*ch = 6;
+					return;
+				case 0x2572:
+					*ch = 7;
+					return;
+				case 0x25E2:
+					*ch = 8;
+					return;
+				case 0x2597:
+					*ch = 9;
+					return;
+				case 0x25E3:
+					*ch = 0xa;
+					return;
+				case 0x259D:
+					*ch = 0xb;
+					return;
+				case 0x2598:
+					*ch = 0xc;
+					return;
+				case 0x2582:
+					*ch = 0xe;
+					return;
+				case 0x2596:
+					*ch = 0xf;
+					return;
+				case 0x2663:
+					*ch = 0x10;
+					return;
+				case 0x2552:
+				case 0x2553:
+				case 0x2554:
+				case 0x250C: // down right corner
+					*ch = 0x11;
+					return;
+				case 0x2550: // double horizontal bar
+				case 0x2500: // horizontal bar
+					*ch = 0x12;
+					return;
+				case 0x253C:
+				case 0x256c:
+				case 0x256b:
+				case 0x256a:
+					*ch = 0x13; // cross
+					return;
+				case 0x2022:
+					*ch = 0x14;
+					return;
+				case 0x2584:
+					*ch = 0x15;
+					return;
+				case 0x258E:
+					*ch = 0x16; // vbar left
+					return;
+				case 0x252C: // HBAR Down
+				case 0x2566:
+				case 0x2564:
+				case 0x2565:
+					*ch = 0x17;
+					return;
+				case 0x2534: // hbar UP
+				case 0x2569:
+				case 0x2567:
+				case 0x2568:
+					*ch = 0x18;
+					return;
+				case 0x258C:
+					*ch = 0x19;
+					return;
+				case 0x255a:
+				case 0x2558:
+				case 0x2559:
+				case 0x2514: // up right corner
+					*ch = 0x1a;
+					return;
+				case 0x241B:
+					*ch = 0x1b;
+					return;
+				case 0x2191:
+					*ch = 0x1c;
+					return;
+				case 0x2193:
+					*ch = 0x1d;
+					return;
+				case 0x2190:
+					*ch = 0x1e;
+					return;
+				case 0x2192:
+					*ch = 0x1f;
+					return;
+				case 0x2666: // diamond
+					if (!chio.fullAscii) {
+						*ch = 0x60;
+						return;
+					}
+					break;
+				case 0x2660: //spade
+					if (!chio.fullAscii) {
+						*ch = 0x7b;
+						return;
+					}
+					break;
+				case 0x2551:
+				case 0x2502:
+					*ch = 0x7c; // vertical bar
+					return;
+				case 0x25c0:
+					if (!chio.fullAscii) {
+						*ch = 0x7e;
+						return;
+					}
+					break;
+				case 0x25b6:
+					if (!chio.fullAscii) {
+						*ch = 0x7f;
+						return;
+					}
+					break;
+				case 0x258a:
+					*ch = 0x02;
 					*attrib = 0x80;
-				}
-				return;
-			default:
-				break;
-		}
+					return;
+				case 0x25e4:
+					*ch = 0x08;
+					*attrib = 0x80;
+					return;
+				case 0x259b:
+					*ch = 0x09;
+					*attrib = 0x80;
+					return;
+				case 0x25e5:
+					*ch = 0x0a;
+					*attrib = 0x80;
+					return;
+				case 0x2599:
+					*ch = 0x0b;
+					*attrib = 0x80;
+					return;
+				case 0x259f:
+					*ch = 0x0c;
+					*attrib = 0x80;
+					return;
+				case 0x2586:
+					*ch = 0x0d;
+					*attrib = 0x80;
+					return;
+				case 0x259c:
+					*ch = 0x0f;
+					*attrib = 0x80;
+					return;
+
+				case 0x25d8:
+					*ch = 0x14;
+					*attrib = 0x80;
+					return;
+				case 0x2580:
+					*ch = 0x15;
+					*attrib = 0x80;
+					return;
+				case 0x2590:
+					*ch = 0x19;
+					*attrib = 0x80;
+					return;
+				case 0x2588:
+				case 0x2591:
+				case 0x2592:
+				case 0x2593:
+					if (chio.fullAscii) {
+						*ch = 0x7f;
+					} else {
+						*ch = ' ';
+						*attrib = 0x80;
+					}
+					return;
+				default:
+					break;
+			}
+			break;
 	}
 	*ch = ERRCHAR;
 	*attrib = ERRATTRIB;
