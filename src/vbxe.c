@@ -292,22 +292,10 @@ void initVbxe(void)
     unsigned char err = ERR_NONE;
     unsigned char y;
     vbxe.bankTop = (unsigned char *) (((unsigned short)ASMEND + 0xfff) & 0xf000);  // VBXE needs to start on 0x1000 boundary above ASMEND
-    OS.iocb[6].buffer = "S2:";
-    OS.iocb[6].buflen = strlen("S:");
-    OS.iocb[6].command = VBXEBIOS_DETECT;
-    OS.iocb[6].aux1 = 0;
-    OS.iocb[6].aux2 = 0;
-    cio(6);
-    iocbErrUpdate(6, &err);
+    callIocb6(VBXEBIOS_DETECT, 0, 0, &err);
     vbxe.bios = ((err == ERR_NONE) && (OS.ziocb.spare == 96));
     if (vbxe.bios) {
-        OS.iocb[6].buffer = "S2:";
-        OS.iocb[6].buflen = strlen("S:");
-        OS.iocb[6].command = VBXEBIOS_GETXDL;
-        OS.iocb[6].aux1 = 0;
-        OS.iocb[6].aux2 = 0;
-        cio(6);
-        iocbErrUpdate(6, &err);
+        callIocb6(VBXEBIOS_GETXDL, 0, 0, &err);
         if (err != ERR_NONE) vbxe.bios = 0;
         else {
             vbxe.XDL_ADR = * (unsigned short *) &OS.iocb[6].aux3;

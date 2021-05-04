@@ -25,5 +25,6 @@ void cursorUpdateRawCon(unsigned char x, unsigned char y);
 void insertCharRawCon(unsigned char x, unsigned char y, unsigned char len);
 void deleteCharRawCon(unsigned char x, unsigned char y, unsigned char len);
 void restoreRawCon(void);
+void callIocb6(unsigned char command, unsigned char aux1, unsigned char aux2, unsigned char *err);
 
 #endif

@@ -1,5 +1,20 @@
 #include "main.h"
 
+
+#if RAWCON_ON || VBXE_ON
+void callIocb6(unsigned char command, unsigned char aux1, unsigned char aux2, unsigned char *err)
+{
+	OS.iocb[6].buffer = "S2:";
+	OS.iocb[6].buflen = strlen("S2:");
+	OS.iocb[6].command = command;
+	OS.iocb[6].aux1 = aux1;
+	OS.iocb[6].aux2 = aux2;
+	OS.ziocb.spare = 0;
+	cio(6);
+	iocbErrUpdate(6, err);
+}
+#endif
+
 #if RAWCON_ON
 
 typedef struct {
@@ -97,17 +112,7 @@ XIO 103 also works in text mode, and it is actually a preferred method of changi
 
 */
 
-void callIocb6(unsigned char command, unsigned char aux1, unsigned char aux2, unsigned char *err)
-{
-	OS.iocb[6].buffer = "S2:";
-	OS.iocb[6].buflen = strlen("S2:");
-	OS.iocb[6].command = command;
-	OS.iocb[6].aux1 = aux1;
-	OS.iocb[6].aux2 = aux2;
-	OS.ziocb.spare = 0;
-	cio(6);
-	iocbErrUpdate(6, err);
-}
+
 
  // memoryindex of 2 means?
 unsigned char rawConTest(void)
