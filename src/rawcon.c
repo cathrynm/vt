@@ -96,6 +96,19 @@ where for f stands for the folowing:
 XIO 103 also works in text mode, and it is actually a preferred method of changing fonts which is "portable" across different video drivers - as not every driver/hardware combo is fast enough to make the CHBAS method available. See also XIO 114.
 
 */
+
+void callIocb6(unsigned char command, unsigned char aux1, unsigned char aux2, unsigned char *err)
+{
+	OS.iocb[6].buffer = "S2:";
+	OS.iocb[6].buflen = strlen("S2:");
+	OS.iocb[6].command = command;
+	OS.iocb[6].aux1 = aux1;
+	OS.iocb[6].aux2 = aux2;
+	OS.ziocb.spare = 0;
+	cio(6);
+	iocbErrUpdate(6, err);
+}
+
  // memoryindex of 2 means?
 unsigned char rawConTest(void)
 {
@@ -109,14 +122,7 @@ unsigned char rawConTest(void)
 		}
 	}
 	if (!rawcon.rawTab) {
-		OS.iocb[6].buffer = "S2:";
-	    OS.iocb[6].buflen = strlen("S2:");
-	    OS.iocb[6].command = VBXEBIOS_DETECT;
-	    OS.iocb[6].aux1 = 0;
-	    OS.iocb[6].aux2 = 0;
-	    OS.ziocb.spare = 0;
-	    cio(6);
-	    iocbErrUpdate(6, &err);
+	    callIocb6(VBXEBIOS_DETECT, 0, 0, &err);
 	    if ((err == ERR_NONE) && (OS.ziocb.spare == 96)) {
 	    	rawcon.rawTab = (rawTabStruct *) * (unsigned short *) &OS.iocb[6].aux3;
 	    }
@@ -124,13 +130,7 @@ unsigned char rawConTest(void)
 	if (!rawcon.rawTab) return 0;
 	rawcon.charCellY = rawcon.charCellX = 0;
 	err = ERR_NONE;
-	OS.iocb[6].buffer = "S2:";
-    OS.iocb[6].buflen = strlen("S2:");
-    OS.iocb[6].command = VBXEBIOS_GETCHARCELL;
-    OS.iocb[6].aux1 = 0;
-    OS.iocb[6].aux2 = 0;
-    cio(6);
-    iocbErrUpdate(6, &err);
+   	callIocb6(VBXEBIOS_GETCHARCELL, 0, 0, &err);
     rawcon.charCellY = (OS.iocb[6].aux2 & 0xf) + 2;
     rawcon.charCellX = (OS.iocb[6].aux2 >> 4) + 2;
 	return 1;
@@ -239,13 +239,7 @@ void initRawCon(void)
 				return;
 		}
 		initAscii(detect.fullChbas, copyChar);
-		OS.iocb[6].buffer = "S2:";
-   		OS.iocb[6].buflen = strlen("S2:");
- 		OS.iocb[6].command = VBXEBIOS_FONTLOAD;
-   		OS.iocb[6].aux1 = 0;
-    	OS.iocb[6].aux2 = detect.fullChbas;
-    	cio(6);
-    	iocbErrUpdate(6, &err);
+	    callIocb6(VBXEBIOS_FONTLOAD, 0, detect.fullChbas, &err);
     	if (err != ERR_NONE) {
 			setFullAscii(0);
 			detect.fullChbas = 0;
