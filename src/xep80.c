@@ -131,9 +131,11 @@ unsigned char setXepCharSet(unsigned char which)
 		case XEPCH_ATASCII:
 			screenX.charSet = 'A';
 			break;
+#if ATARIINTERNATIONAL
 		case XEPCH_ATINT:
 			screenX.charSet = 'I';
 			break;
+#endif
 	}
 	setFullAscii((which == XEPCH_INTERN)); // Internal charset has { } ~ characters
 	return err;
@@ -166,7 +168,7 @@ void insertLineXep(unsigned char y, unsigned char yBottom)
 
 void clearScreenXep(void)
 {
-	callEColonSpecial(20, 0xc, isXep80Internal()? XEP_FILLSPACE:XEP_FILLEOL);
+	callEColonSpecial(20, 0xc, (screenX.charSet == 'X')? XEP_FILLSPACE:XEP_FILLEOL);
 }
 
 void deleteCharXep(unsigned char x, unsigned char y)
@@ -225,7 +227,19 @@ void initXep(void)
 	xep.rMargn = OS.rmargn + 1;
 	setBurstMode(1);
 	setXepCharSet(XEPCH_INTERN);
-	xep.fillFlag = isXep80Internal()? 0x40: (isIntl()? 0x20: 0x00);
+	switch(screenX.charSet) {
+		case 'X':
+			xep.fillFlag = 0x40;
+			break;
+#if ATARIINTERNATIONAL
+		case 'I':
+			xep.fillFlag = 0x20;
+			break;
+#endif
+		case 'A':
+			xep.fillFlag = 0x00;	
+			break;
+	}
 	for (y = 0;y<XEPLINES;y++)setXepRowPtr(y, xep.fillFlag| y);
 	OS.colcrs = OS.lmargn;
 	xep.xepX = OS.colcrs;
