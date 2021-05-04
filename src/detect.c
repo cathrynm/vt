@@ -53,8 +53,8 @@ void initDetect(void)
 #endif
 	}
 
-#if DIRECT_ON
-	if (detect.videoMode == 'D') {
+#if DIRECT_ON || RAWCON_ON
+	if ((detect.videoMode == 'D') || ((detect.videoMode == 'R') &&  supportsCharacterSet())) {
 		if (((unsigned short) OS.memlo + 0x400 <= startAddress)  && !(startAddress & 0x3ff)) {
 			startAddress -= 0x400;
 			detect.fullChbas = startAddress >> 8;

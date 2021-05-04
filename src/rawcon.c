@@ -3,21 +3,9 @@
 #if RAWCON_ON
 
 typedef struct {
-	unsigned char numEntries;
-	void __fastcall__ (*enable)(void);
-	void __fastcall__ (*disable)(void);
-	void __fastcall__ (*tempShutoff)(void);
-	void __fastcall__ (*reActivate)(void);
-	void __fastcall__ (*clearScreen)(void);
-	void __fastcall__ (*reloadColors)(void);
-	unsigned char __fastcall__ (*getChar)(void);
-	void __fastcall__ (*putChar)(unsigned char c);
-	void __fastcall__ (*xio)(void);
-} rawTabStruct;
-
-typedef struct {
 	rawTabStruct *rawTab;
 	unsigned char memoryIndex;
+	unsigned char charCellX, charCellY;
 } rawConStruct;
 
 rawConStruct rawcon;
@@ -110,13 +98,48 @@ XIO 103 also works in text mode, and it is actually a preferred method of changi
  // memoryindex of 2 means?
 unsigned char rawConTest(void)
 {
-	void *symbol;
-	if (_dos_type != SPARTADOS) return 0;
-	symbol = jfsymbol("_RAWCON  ");
-	if (!symbol) return 0;
-	rawcon.rawTab = symbol;
-	rawcon.memoryIndex = jfsymbol_memoryIndex;
+	unsigned char err = ERR_NONE;
+	rawcon.rawTab = NULL;
+	rawcon.memoryIndex = 0;
+	if (_dos_type == SPARTADOS) {
+		rawcon.rawTab = jfsymbol("_RAWCON  ");
+		if (rawcon.rawTab) {
+			rawcon.memoryIndex = jfsymbol_memoryIndex;
+		}
+	}
+	if (!rawcon.rawTab) {
+		OS.iocb[6].buffer = "S2:";
+	    OS.iocb[6].buflen = strlen("S2:");
+	    OS.iocb[6].command = VBXEBIOS_DETECT;
+	    OS.iocb[6].aux1 = 0;
+	    OS.iocb[6].aux2 = 0;
+	    OS.ziocb.spare = 0;
+	    cio(6);
+	    iocbErrUpdate(6, &err);
+	    if ((err == ERR_NONE) && (OS.ziocb.spare == 96)) {
+	    	rawcon.rawTab = (rawTabStruct *) * (unsigned short *) &OS.iocb[6].aux3;
+	    }
+	}
+	if (!rawcon.rawTab) return 0;
+	rawcon.charCellY = rawcon.charCellX = 0;
+	err = ERR_NONE;
+	OS.iocb[6].buffer = "S2:";
+    OS.iocb[6].buflen = strlen("S2:");
+    OS.iocb[6].command = VBXEBIOS_GETCHARCELL;
+    OS.iocb[6].aux1 = 0;
+    OS.iocb[6].aux2 = 0;
+    cio(6);
+    iocbErrUpdate(6, &err);
+    rawcon.charCellY = (OS.iocb[6].aux2 & 0xf) + 2;
+    rawcon.charCellX = (OS.iocb[6].aux2 >> 4) + 2;
 	return 1;
+}
+
+unsigned char supportsCharacterSet(void)
+{
+	if (rawcon.charCellY != 8) return 0;
+	if (rawcon.charCellX == 8) return 1;
+	return 0;
 }
 
 void drawCharsAtRawCon(unsigned char *buffer, unsigned char bufferLen)
@@ -181,6 +204,20 @@ void insertLineRawCon(unsigned char topY, unsigned char bottomY)
 
 void initRawCon(void)
 {
+	unsigned char err = ERR_NONE;
+	if (detect.fullChbas) {
+		initAscii(detect.fullChbas, NULL);
+		OS.iocb[6].buffer = "S2:";
+   		OS.iocb[6].buflen = strlen("S2:");
+ 		OS.iocb[6].command = VBXEBIOS_FONTLOAD;
+   		OS.iocb[6].aux1 = 0;
+    	OS.iocb[6].aux2 = detect.fullChbas;
+    	cio(6);
+    	iocbErrUpdate(6, &err);
+    	if (err != ERR_NONE) {
+			setFullAscii(0);
+    	}
+	}
 }
 
 #endif

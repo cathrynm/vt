@@ -287,24 +287,6 @@ void copyCharVbxe(unsigned char ch, unsigned char *from)
     vbxeWriteFrom(VBXE_FONTMEM + ((unsigned short) ch << 3), from, VBXE_FONTBANK, 8);
 }
 
-#define VBXEBIOS_DETECT 96
-#define VBXEBIOS_SCROLLUP 97
-#define VBXEBIOS_SCROLLDOWN 98
-#define VBXEBIOS_CLEARLINE 99
-#define VBXEBIOS_PALETTERESET 100
-#define VBXEBIOS_PALETTEWRITE 101
-#define VBXEBIOS_PALETTEREAD 102
-#define VBXEBIOS_FONTLOAD 103
-#define VBXEBIOS_PUTCHAR 105
-#define VBXEBIOS_GETXDL 107
-#define VBXEBIOS_GETVCTRL 108
-#define VBXEBIOS_ALLOC 109
-#define VBXEBIOS_TEXTFAST 111
-#define VBXEBIOS_TEXTFASTOFF 112
-#define VBXEBIOS_PALETTELOADSWITHFONT 113
-#define VBXEBIOS_GETCHARCELL 114
-
-
 void initVbxe(void)
 {
     unsigned char err = ERR_NONE;
