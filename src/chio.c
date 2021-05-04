@@ -945,6 +945,7 @@ unsigned char initChio(void) // Don't use malloc from here.
 {
 	unsigned char err = ERR_NONE;
 	memset((unsigned char *)&chio, 0, sizeof(chio));
+	screenX.charSet = (detect.chbas == 204)? 'I': 'A';
 	chio.utfType  = 0;
 	chio.fullAscii = 0;
 	if (detect.osType >= 2) chio.keyTab = OS.keydef;

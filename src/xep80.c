@@ -124,6 +124,17 @@ unsigned char setXepCharSet(unsigned char which)
 	if (which == xep.xepCharset)return err;
 	callEColonSpecial(20, 12, which);
 	xep.xepCharset = which;
+	switch(xep.xepCharset) {
+		case XEPCH_INTERN:
+			screenX.charSet = 'X';
+			break;
+		case XEPCH_ATASCII:
+			screenX.charSet = 'A';
+			break;
+		case XEPCH_ATINT:
+			screenX.charSet = 'I';
+			break;
+	}
 	setFullAscii((which == XEPCH_INTERN)); // Internal charset has { } ~ characters
 	return err;
 }

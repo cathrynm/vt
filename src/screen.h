@@ -3,12 +3,17 @@
 
 #define SCREENLINES 24
 
+#define CHARSET_ATARINORMAL 'A'
+#define CHARSET_ATARIINTERNATIONAL 'I'
+#define CHARSET_XEPINTERNAL 'X'
+
 typedef struct {
 	unsigned char screenWidth;
 	unsigned char lineLength[SCREENLINES];
 	unsigned char lineWidth;
 	unsigned short lineTab[SCREENLINES];
 	unsigned char cursX, cursY;
+	unsigned char charSet;
 }screenXStruct;
 
 extern screenXStruct screenX;
