@@ -726,10 +726,12 @@ unsigned char getChar(unsigned char *err)
 
 void click(void) {
 	unsigned char n;
+	unsigned char vc;
 	if (detect.osType < 2 || !OS.noclik) {
-		for (n = 0;n<128;n++) {
-			GTIA_READ.consol = 0x7f;
-			ANTIC.wsync = 0x7f;
+		for (n = 0;n<63*2;n+=2) {
+			GTIA_WRITE.consol = n & 0x8;
+			vc = ANTIC.vcount;
+			while (vc == ANTIC.vcount);
 		}
 	}
 }
