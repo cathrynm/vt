@@ -736,7 +736,7 @@ void click(void) {
 	}
 }
 
-unsigned char isKeyReady(void) {
+unsigned char isKeyReady(void) { // handle cases where OS.ch != 0xff, but then getchar will still block.
 	unsigned char ch = OS.ch, code;
 	if (ch >= 0xff)return 0; // NO key pressed
 	if (ch < 0xc0) {
@@ -777,57 +777,71 @@ unsigned char anyKey(void) {
 	return OS.ch != 0xff;
 }
 
-unsigned char extraKey(void)
+unsigned char extraKey(unsigned char *extra)
 {
-	unsigned char extra = 0;
-	unsigned char ch = OS.ch;
+	unsigned char ch = OS.ch, c;
+	*extra = 0;
 	if ((ch == 0xff) || !chio.keyTab)return 0;
-	if (ch >= 0xc0) {
-		switch(chio.keyTab[ch & 0x3f]) {
-			case ',':
-				extra = '{';
-				break;
-			case '.':
-				extra = '}'; 
-				break;
-			case '-':
-				extra = CH_CURS_UP;
-				OS.superf = 1;
-				break;
-			case '=':
-				extra = CH_CURS_DOWN;
-				OS.superf = 1;
-				break;
-			case '<':
-				extra = CH_CURS_LEFT;
-				OS.superf = 1;
-				break;
-			case '>':
-				extra = CH_CURS_RIGHT;
-				OS.superf = 1;
-				break;
-			case '\033':
-				extra = '~';
-				break;
-			case '7': // ctrl-shift on apostrophe generates backwards apostraphe.
-				extra = '`';
-				break;
-			default:
-				break;
-		}
+	c = 0;
+	switch(ch & 0xc0) {
+		case 0xc0:
+			switch(chio.keyTab[ch & 0x3f]) {
+				case ',':
+					*extra = '{'; // These overlap with atari keys
+					break;
+				case '.':
+					*extra = '}'; 
+					break;
+				case '-':
+					c = CH_CURS_UP; // Page Up
+					OS.superf = 1;
+					break;
+				case '=':
+					c = CH_CURS_DOWN; // Page Down
+					OS.superf = 1;
+					break;
+				case '<':
+					c = CH_CURS_LEFT; // Home
+					OS.superf = 1;
+					break;
+				case '>':
+					c = CH_CURS_RIGHT; // End
+					OS.superf = 1;
+					break;
+				case '/':
+					*extra = '\037';
+					break;
+				default:
+					break;
+			}
+			break;
+		case 0x40:
+			switch(chio.keyTab[ch & 0x3f]) {
+				case '\033': // Shift Esc for ~
+					*extra = '~';
+					break;
+				default:
+					break;
+			}
+			break;
+		case 0x80: // control
+			switch(chio.keyTab[ch & 0x3f]) {
+				case '\033': // ctrl Esc for `.
+					*extra = '`';
+					break;
+				default:
+					break;
+			}
+			break;
+		case 0:
+			break;
 	}
-	if (!extra)return 0;
+	if (!*extra && !c)return 0;
 	OS.holdch = ch;
 	OS.ch = 0xff;
-	OS.atachr = extra;
+	OS.atachr = c;
 	click(); // Swallow up the key here.
-	return extra;
-}
-
-unsigned char convertAtasciiToUtf8(unsigned char c, unsigned char *utf8, unsigned char *utf8Len)
-{
-	c=c;utf8=utf8;utf8Len=utf8Len;
-	return 0;
+	return c;
 }
 
 void handleInput(unsigned char *err)
@@ -836,30 +850,16 @@ void handleInput(unsigned char *err)
 	static unsigned char cr = 0x9b, bs = 8, del = 0x7f, null = 0;
 	unsigned char utf8[4];
 	unsigned char superF, ch, shift = OS.ch & 0xc0, utf8Len;
-	ch = extraKey(); // Check for any special keys first. 
-	extra = ch != 0;
-	if (!ch) {
+	ch = extraKey(&extra); // Check for any special keys first. 
+	if (!ch && !extra) {
 		if (!isKeyReady())return;
 		ch = getChar(err);
 		if (*err != ERR_NONE)return;
 	}
 	superF = OS.superf;
+	OS.superf = 0;
 	if (extra) {
-		switch(ch) {
-			case CH_CURS_UP:
-			case CH_CURS_DOWN:
-			case CH_CURS_LEFT:
-			case CH_CURS_RIGHT:
-				if (superF) {
-					vtSendPgUpDown(ch - CH_CURS_UP, err);
-				} else {
-					vtSendCursor(ch - CH_CURS_UP, err);
-				}
-				break;
-			default:
-				sendResponse(&ch, 1, err);
-				break;
-		}
+		sendResponse(&extra, 1, err);
 	} else switch(ch) {
 		case CH_CURS_UP:
 		case CH_CURS_DOWN:
@@ -879,7 +879,6 @@ void handleInput(unsigned char *err)
 			break;
 		}
 		case CH_DELCHR:{
-			//sendResponse(&del, 1);
 			sendResponse("\033[P", 3, err);
 			break;
 		}
@@ -889,34 +888,17 @@ void handleInput(unsigned char *err)
 		case CH_INSLINE:
 			sendResponse("\033[L", 3, err);
 			break;
-		case ' ':
-			if ((shift & 0xc0) == 0x80) {
-				sendResponse(&null, 1, err);
-			} else sendResponse(" ", 1, err);
-			break;
-		case '.':
-			if ((shift & 0xc0) == 0x80) sendResponse("\033", 1, err);
-			else sendResponse(".", 1, err);
-			break;
-		case ',':
-			if ((shift & 0xc0) == 0x80) sendResponse("\035", 1, err);
-			else sendResponse(",", 1, err);
-			break;
-		case '?':
-			if ((shift & 0xc0) == 0x80) sendResponse("\037", 1, err);
-			else sendResponse("?", 1, err);
-			break;
 		case CH_EOL:
 			vtSendCr(err);
+			break;
+		case CH_TAB:
+			sendResponse("\011", 1, err);
 			break;
 		default: {
 			// Control characters go through, also 
 			if (((ch >= 1) && (ch <= 26)) || (ch >= 32 && ch <=95) || (ch >= 97 && ch <= 122) || (ch == 124) || (ch == CH_ESC)) {
 				sendResponse(&ch, 1, err);
 				break;
-			}
-			if (convertAtasciiToUtf8(ch, &utf8[0], &utf8Len)) {
-				sendResponse(utf8, utf8Len, err);
 			}
 			break;
 		}
