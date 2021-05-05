@@ -2,6 +2,8 @@
 
 detectStruct detect;
 
+#if CIO_ON
+
 unsigned char logMapTrickTest(void)
 {
 	static const unsigned char drawTest[]  = {CH_CLR, CH_CURS_LEFT, ' '};
@@ -14,12 +16,15 @@ unsigned char logMapTrickTest(void)
 	return (OS.logcol == OS.lmargn);  // IF logmap trick works, then a line is not inserted here.
 }
 
+#endif
+
 
 void initDetect(void)
 {
 	unsigned short startAddress = (unsigned short)&_STARTADDRESS__; // Start the program on 0x400 boundary.  So 0x400 below is good
 	detect.osType = get_ostype() & AT_OS_TYPE_MAIN;
 	detect.origChbas = OS.chbas;
+	detect.logMapTrick = 0;
 #if ATARIINTERNATIONAL
 	detect.chbas = OS.chbas;
 #else
@@ -47,10 +52,9 @@ void initDetect(void)
 		detect.videoMode = 'R';
 #endif
 #if CIO_ON
-	} else if (logMapTrickTest()) {
-		detect.videoMode = 'A'; // This is normal Atari mode, but not direct drawing.  I think everything that does this passes directDrawTest, but maybe someday...
 	} else {
-		detect.videoMode = 'G'; // Generic Atari  
+		if (logMapTrickTest()) detect.logMapTrick = 1; // Real atari OS can draw in 39th column by monkeying with logmap
+		detect.videoMode = 'A'; // This is normal Atari mode, but not direct drawing.  I think everything that does this passes directDrawTest, but maybe someday...
 #endif
 	}
 

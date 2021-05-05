@@ -7,6 +7,7 @@ typedef struct {
 	unsigned char chbas, fullChbas, origChbas;
 	unsigned char osType;
 	unsigned char hasColor;
+	unsigned char logMapTrick;
 } detectStruct;
 extern detectStruct detect;
 

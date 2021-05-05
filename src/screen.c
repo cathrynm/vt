@@ -267,10 +267,9 @@ void drawCharsAt(unsigned char *buffer, unsigned char bufferLen, unsigned char x
 #endif
 #if CIO_ON
 		case 'A':
-		case 'G':
 			if (x + bufferLen < screenX.screenWidth) {
 				callEColonPutBytes(buffer, bufferLen);
-			} else if ((detect.videoMode == 'A') && (y < SCREENLINES-1)) {
+			} else if (detect.logMapTrick && (y < SCREENLINES-1)) {
 				logMapTouch = y + 1;
 				OS.logmap[logMapTouch >> 3] &= ~(1 << (7-( logMapTouch & 7))); // Fake out OS, tell it next line is continuation, just for this. 
 				callEColonPutBytes(buffer, bufferLen);
@@ -387,7 +386,6 @@ void drawInsertLine(unsigned char y, unsigned char yBottom, unsigned char color)
 #endif
 #if CIO_ON
 		case 'A':
-		case 'G':
 			OS.dspflg = 0;
 			OS.colcrs = OS.lmargn;
 			if (yBottom < SCREENLINES -1) {
