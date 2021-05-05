@@ -52,7 +52,7 @@ unsigned char closeChio(void)
 void convertLongToVisibleChar(unsigned long c, unsigned char *ch, unsigned char *attrib)
 {
 	switch(screenX.charSet) {
-#if XEP_ON
+#if XEPINTERNALFONT
 		case 'X':
 			switch(c) {
 				default:
@@ -148,7 +148,7 @@ void convertShortToVisibleChar(unsigned short c, unsigned char *ch, unsigned cha
 {
 	*attrib = 0;
 	switch(screenX.charSet) {
-#if XEP_ON
+#if XEPINTERNALFONT
 		case 'X':
 			switch(c) {
 				case 0x0132:

@@ -29,10 +29,6 @@ void setBurstMode(unsigned char on)
 	xep.burst = on;
 }
 
-unsigned char isXep80Internal(void) {
-	return (xep.xepCharset == XEPCH_INTERN) && (detect.videoMode == 'X');
-}
-
 void setXEPXPos(unsigned char hpos) {
 	if (hpos < 80) {
 		callEColonSpecial(20, 12, XEP_SETCURSORHPOS | hpos);
@@ -125,9 +121,11 @@ unsigned char setXepCharSet(unsigned char which)
 	callEColonSpecial(20, 12, which);
 	xep.xepCharset = which;
 	switch(xep.xepCharset) {
+#if XEPINTERNALFONT
 		case XEPCH_INTERN:
 			screenX.charSet = 'X';
 			break;
+#endif
 		case XEPCH_ATASCII:
 			screenX.charSet = 'A';
 			break;
@@ -168,13 +166,19 @@ void insertLineXep(unsigned char y, unsigned char yBottom)
 
 void clearScreenXep(void)
 {
-	callEColonSpecial(20, 0xc, (screenX.charSet == 'X')? XEP_FILLSPACE:XEP_FILLEOL);
+	callEColonSpecial(20, 0xc, 
+#if XEPINTERNALFONT
+		(screenX.charSet == 'X')? XEP_FILLSPACE:
+#endif
+		XEP_FILLEOL);
 }
 
 void deleteCharXep(unsigned char x, unsigned char y)
 {
 	cursorHide();
-	drawXEPCharAt(CH_EOL, xep.rMargn, y);
+#if XEPINTERNALFONT
+	if (screenX.charSet == 'X')drawXEPCharAt(CH_EOL, xep.rMargn, y);
+#endif
 	OS.rmargn = xep.rMargn;
 	OS.dspflg = 0;
 	OS.rowcrs = y;
@@ -182,7 +186,9 @@ void deleteCharXep(unsigned char x, unsigned char y)
 	xepCursorShadow();
 	callEColonPutByte(CH_DELCHR);
 	xep.currentXepX = OS.colcrs;
-	drawXEPCharAt(' ', xep.rMargn - 1, y);
+#if XEPINTERNALFONT
+	if (screenX.charSet == 'X')drawXEPCharAt(' ', xep.rMargn - 1, y);
+#endif
 }
 
 void insertCharXep(unsigned char x, unsigned char y)
@@ -221,16 +227,27 @@ void cursorUpdateXep(unsigned char x, unsigned char y)
 
 void initXep(void)
 {
-	unsigned char y;
+	unsigned char y, xFont;
 	xep.burst = 0;
 	xep.origRMargn = OS.rmargn;
 	xep.rMargn = OS.rmargn + 1;
 	setBurstMode(1);
-	setXepCharSet(XEPCH_INTERN);
+#if XEPINTERNALFONT
+	xFont = XEPCH_INTERN;
+#else 
+#if ATARIINTERNATIONAL
+	xFont = isIntl() ? XEPCH_ATINT : XEPCH_ATASCII;
+#else
+	xFont = XEPCH_ATASCII;
+#endif
+#endif
+	setXepCharSet(xFont);
 	switch(screenX.charSet) {
+#if XEPINTERNALFONT
 		case 'X':
 			xep.fillFlag = 0x40;
 			break;
+#endif
 #if ATARIINTERNATIONAL
 		case 'I':
 			xep.fillFlag = 0x20;
