@@ -832,17 +832,35 @@ unsigned char convertAtasciiToUtf8(unsigned char c, unsigned char *utf8, unsigne
 
 void handleInput(unsigned char *err)
 {
+	unsigned char extra;
 	static unsigned char cr = 0x9b, bs = 8, del = 0x7f, null = 0;
 	unsigned char utf8[4];
 	unsigned char superF, ch, shift = OS.ch & 0xc0, utf8Len;
 	ch = extraKey(); // Check for any special keys first. 
+	extra = ch != 0;
 	if (!ch) {
 		if (!isKeyReady())return;
 		ch = getChar(err);
 		if (*err != ERR_NONE)return;
 	}
 	superF = OS.superf;
-	switch(ch) {
+	if (extra) {
+		switch(ch) {
+			case CH_CURS_UP:
+			case CH_CURS_DOWN:
+			case CH_CURS_LEFT:
+			case CH_CURS_RIGHT:
+				if (superF) {
+					vtSendPgUpDown(ch - CH_CURS_UP, err);
+				} else {
+					vtSendCursor(ch - CH_CURS_UP, err);
+				}
+				break;
+			default:
+				sendResponse(&ch, 1, err);
+				break;
+		}
+	} else switch(ch) {
 		case CH_CURS_UP:
 		case CH_CURS_DOWN:
 		case CH_CURS_LEFT:
