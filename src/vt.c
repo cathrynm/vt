@@ -1032,6 +1032,7 @@ void debugVt(unsigned char c)
 void displayUtf8Char(unsigned char c, unsigned char attribute)
 {
 	debugVt(c);
+	if (c == 0x7f) c = ' ';
 	addChar(c, vt.attribute ^ attribute, vt.attribute1, vt.color);
 	esc.commandIndex = 0;
 }

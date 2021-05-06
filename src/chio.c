@@ -105,6 +105,10 @@ void convertAsciiToVisibleChar(unsigned char *ch, unsigned char *attrib)
 {
 	if ((*ch >= 32 && *ch <=95) || (*ch >= 97 && *ch <= 122) || (*ch == 124))return;
 	if (chio.fullAscii && ((*ch == 96) || (*ch == 123) || (*ch == 125) || (*ch == 126)))return;
+	if (*ch == 127) {
+		*ch = ' ';
+		return;
+	}
 	*attrib = ERRATTRIB;  // Atari are missing { } ` ~.  Show as undrawable.  127, 0-31 are undrawable anyway.
 	*ch = ERRCHAR;
 }
