@@ -33,30 +33,33 @@ void initDetect(void)
 	detect.fullChbas = 0;
 	detect.hasColor  = 0;
 	detect.videoMode = 0;
-	if (0) {
 #if DIRECT_ON
-	} else if (directDrawTest()) {
+	if (!detect.videoMode && directDrawTest()) {
 		detect.videoMode = 'D';
+	}
 #endif
 #if XEP_ON
-	} else if (XEP80Test()) {
+	if (!detect.videoMode && XEP80Test()) {
 		detect.videoMode = 'X';
+	}
 #endif
 #if VBXE_ON
-	} else if (vbxeTest()) {
+	if (!detect.videoMode && vbxeTest()) {
 		detect.videoMode = 'V';
 		detect.hasColor = 1;
+	}
 #endif
 #if RAWCON_ON
-	} else if (rawConTest()) {
+	if (!detect.videoMode && rawConTest()) {
 		detect.videoMode = 'R';
+	}
 #endif
 #if CIO_ON
-	} else {
+	if (!detect.videoMode) {
 		if (logMapTrickTest()) detect.logMapTrick = 1; // Real atari OS can draw in 39th column by monkeying with logmap
 		detect.videoMode = 'A'; // This is normal Atari mode, but not direct drawing.  I think everything that does this passes directDrawTest, but maybe someday...
-#endif
 	}
+#endif
 
 #if DIRECT_ON || RAWCON_ON
 	if (
