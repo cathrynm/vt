@@ -848,8 +848,7 @@ void handleInput(unsigned char *err)
 {
 	unsigned char extra;
 	static unsigned char cr = 0x9b, bs = 8, del = 0x7f, null = 0;
-	unsigned char utf8[4];
-	unsigned char superF, ch, shift = OS.ch & 0xc0, utf8Len;
+	unsigned char superF, ch, shift = OS.ch & 0xc0;
 	ch = extraKey(&extra); // Check for any special keys first. 
 	if (!ch && !extra) {
 		if (!isKeyReady())return;
