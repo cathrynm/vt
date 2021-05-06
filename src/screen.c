@@ -165,7 +165,7 @@ void drawClearScreen(unsigned char color)
 			break;
 #endif
 	}
-	for (y = 0;y< 24;y++) screenX.lineLength[y] = 0;
+	for (y = 0;y< SCREENLINES;y++) screenX.lineLength[y] = 0;
 }
 
 void bumpCursor(void)
