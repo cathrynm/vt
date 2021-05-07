@@ -165,9 +165,7 @@ void geturl(int *argc, char ***argv, unsigned char *err)
 	drawChar(clearScreenChar);
 	if (*err != ERR_NONE) {
 		n = charToA(*err, error, 7);
-		for (;n<10;n++) {
-			error[10] = ' ';
-		}
+		for (;n<10;n++) error[n] = ' ';
 		drawString(error);
 		*err = ERR_NONE;
 	}
