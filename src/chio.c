@@ -851,7 +851,7 @@ unsigned char extraKey(unsigned char *extra)
 void handleInput(unsigned char *err)
 {
 	unsigned char extra;
-	static unsigned char cr = 0x9b, bs = 8, del = 0x7f, null = 0;
+	static unsigned char cr = 0x9b, bs = 8, del = 0x7f, null = 0, tab = 9;
 	unsigned char superF, ch, shift = OS.ch & 0xc0;
 	ch = extraKey(&extra); // Check for any special keys first. 
 	if (!ch && !extra) {
@@ -895,7 +895,7 @@ void handleInput(unsigned char *err)
 			vtSendCr(err);
 			break;
 		case CH_TAB:
-			sendResponse("\011", 1, err);
+			sendResponse(&tab, 1, err);
 			break;
 		default: {
 			// Control characters go through, also 
