@@ -15,7 +15,7 @@
 
 #define IOCB_SERIAL 3
 typedef struct serialDataStruct serialStruct;
-#define RBUFFERSIZE 0x200
+#define RBUFFERSIZE 0x400
 struct serialDataStruct {
 	unsigned char *buffer;
 	unsigned char baudWordStop, xlat;
@@ -154,7 +154,7 @@ void serialOpen(unsigned char *device, unsigned char deviceLen, unsigned char ba
 	cio(IOCB_SERIAL);
 	iocbErrUpdate(IOCB_SERIAL, err);
 	if (*err != ERR_NONE)return;
-	serial.buffer = malloc(RBUFFERSIZE);
+	serial.buffer = malloc(RBUFFERSIZE); // This can't overlap with VBXE Window.  There's nothing here to prvent this.
 	if (!serial.buffer) {
 		*err = ERR_OUTOFMEMORY;
 		serialClose(device, deviceLen, err);
@@ -180,21 +180,6 @@ unsigned short serialStatus(unsigned char *err)
 	iocbErrUpdate(IOCB_SERIAL, err);
 	if (*err != ERR_NONE) return 0;
 	return * (unsigned short *) &OS.dvstat[1];
-}
-
-void serialFlow(unsigned short inputReady, unsigned char *err)
-{		
-	if (inputReady >= ((RBUFFERSIZE * 3) >> 2)) {
-		if (serial.rts) {
-			serial.rts = 0;
-			sendSerialResponse("\023", 1, err);
-		}
-	} else {
-		if (!serial.rts) {
-			serial.rts = 1;
-			sendSerialResponse("\021", 1, err);
-		}
-	}
 }
 
 void serialRead(unsigned char *data, unsigned short len, unsigned char *err)

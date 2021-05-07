@@ -1,8 +1,8 @@
 #include "main.h"
 
-#define READBUFFERLEN 512
+
 typedef struct {
-	unsigned char readBuffer[READBUFFERLEN];
+	unsigned char *readBuffer;
 	unsigned char *deviceName;
 	unsigned char deviceLen;
 	unsigned char deviceType;
@@ -68,23 +68,6 @@ unsigned short ioStatus(unsigned char *err) {
 	}
 }
 
-void ioFlow(unsigned short inputReady, unsigned char *err) {
-	switch(io.deviceType) {
-#if SERIAL_ON
-		case 'R':
-			serialFlow(inputReady, err);
-			break;
-#endif
-#if FUJINET_ON
-		case 'N':
-			break;
-#endif
-		default:
-			errUpdate(ERR_DEVICENOTEXIST, err);
-			break;
-	}
-}
-
 void ioRead(unsigned char *data, unsigned short len, unsigned char *err) {
 	switch(io.deviceType) {
 #if SERIAL_ON
@@ -105,25 +88,26 @@ void ioRead(unsigned char *data, unsigned short len, unsigned char *err) {
 
 void readData(unsigned char *err) {
 	unsigned short n;
-	unsigned short readLen, inputReady;
+	unsigned short inputReady;
 	if (!proceedReady())return;
 	for (;;) { // Just keep going until drained.
 		inputReady = ioStatus(err);
 		if (*err != ERR_NONE)break;
-		ioFlow(inputReady, err);
-		if (*err != ERR_NONE)break;
 		if (!inputReady)break;
-		for (;inputReady;) {
-			readLen = inputReady < sizeof(io.readBuffer)? inputReady: sizeof(io.readBuffer);
-			ioRead(io.readBuffer, readLen, err);
-			if (*err != ERR_NONE) break;
-			for (n = 0;n < readLen;n++) {
-				decodeUtf8Char(io.readBuffer[n], err);
-			}
-			if (*err != ERR_NONE)break;
-			inputReady -= readLen;
-			if (anyKey())break;
+		io.readBuffer = malloc(inputReady);
+		if (!io.readBuffer) {
+			*err = ERR_OUTOFMEMORY;
+			break;
 		}
+		ioRead(io.readBuffer, inputReady, err);
+		if (*err != ERR_NONE) {
+			free(io.readBuffer);
+			break;
+		}
+		for (n = 0;n < inputReady;n++) {
+			decodeUtf8Char(io.readBuffer[n], err);
+		}
+		free(io.readBuffer);
 		if (*err != ERR_NONE)break;
 		if (anyKey())break;
 	}

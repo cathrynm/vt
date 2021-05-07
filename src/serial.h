@@ -78,7 +78,6 @@ unsigned short getBaud(void);
 unsigned char getBits(void);
 unsigned char getParity(void);
 unsigned short serialStatus(unsigned char *err);
-void serialFlow(unsigned short inputReady, unsigned char *err);
 void serialRead(unsigned char *data, unsigned short len, unsigned char *err);
 unsigned char stringToBaud(unsigned char *s);
 
