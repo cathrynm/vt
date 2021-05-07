@@ -23,7 +23,7 @@ void initScreen(void);
 void cursorUpdate(unsigned char x, unsigned char y);
 void drawCharAt(unsigned char c, unsigned char attribute, unsigned char color, unsigned char x, unsigned char y);
 void drawClearCharsAt(unsigned char len, unsigned char x, unsigned char y, unsigned char color);
-void drawClearLine(unsigned char y, unsigned char color);
+void drawClearLine(unsigned char y, unsigned char color, unsigned char preserveLength);
 void drawInsertLine(unsigned char y, unsigned char yBottom, unsigned char color);
 void drawDeleteLine(unsigned char y, unsigned char yBottom, unsigned char color);
 void drawInsertChar(unsigned char x, unsigned char y, unsigned char color);

@@ -336,18 +336,11 @@ void restoreVbxe(void)
     }
 }
 
-void drawClearLineVbxe(unsigned char y, unsigned char color)
-{
-    unsigned char ySave = screenX.lineLength[y];
-    drawClearLine(y, color);
-    screenX.lineLength[y] = ySave;
-}
-
 void clearScreenVbxe(unsigned char color)
 {
     unsigned char yp;
     for (yp = 0;yp < SCREENLINES;yp++) {
-        drawClearLineVbxe(yp, color);
+        drawClearLine(yp, color, 1);
     }
 }
 
@@ -405,7 +398,7 @@ void insertLineVbxe(unsigned char y, unsigned char yBottom, unsigned char color)
     cursorHide();
     if (y < yBottom)
         blit(VBXE_SCREENADDR + screenX.lineTab[yBottom] + VBXE_WIDTH*2-1, VBXE_SCREENADDR + screenX.lineTab[yBottom - 1] + VBXE_WIDTH*2-1, VBXE_WIDTH, yBottom - y, 1);
-    drawClearLineVbxe(y, color);
+    drawClearLine(y, color, 1);
 }
 
 void deleteLineVbxe(unsigned char y, unsigned char yBottom, unsigned char color)
@@ -413,7 +406,7 @@ void deleteLineVbxe(unsigned char y, unsigned char yBottom, unsigned char color)
     cursorHide();
     if (y < yBottom)
         blit(VBXE_SCREENADDR + screenX.lineTab[y], VBXE_SCREENADDR + screenX.lineTab[y+1], VBXE_WIDTH, yBottom - y, 0);
-    drawClearLineVbxe(yBottom, color);
+    drawClearLine(yBottom, color, 1);
 }
 
 void insertCharVbxe(unsigned char x, unsigned char y, unsigned char color)

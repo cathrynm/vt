@@ -347,10 +347,10 @@ void clearScreen(unsigned char which)
 	switch(which) {
 		case 0:
 			if (vt.x <= vt.rMargin)	drawClearCharsAt( vt.rMargin + 1 - vt.x, vt.x, vt.y, vt.color & 0x70);
-			for (y = vt.y+1;y<VTSCREENLINES;y++) drawClearLine(y, vt.color & 0x70);
+			for (y = vt.y+1;y<VTSCREENLINES;y++) drawClearLine(y, vt.color & 0x70, 0);
 			break;
 		case 1:
-			for (y = 0;y< vt.y;y++) drawClearLine(y, vt.color & 0x70);
+			for (y = 0;y< vt.y;y++) drawClearLine(y, vt.color & 0x70, 0);
 			drawClearCharsAt( vt.x + 1, 0, vt.y, vt.color & 0x70);
 			break;
 		case 2:
@@ -370,7 +370,7 @@ void clearLine(unsigned char which)
 			drawClearCharsAt( vt.x + 1, 0, vt.y, vt.color & 0x70);
 			break;
 		case 2:
-			drawClearLine(vt.y, vt.color & 0x70);
+			drawClearLine(vt.y, vt.color & 0x70, 0);
 			break;
 	}
 }

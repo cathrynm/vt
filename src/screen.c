@@ -354,10 +354,15 @@ void drawClearCharsAt(unsigned char len, unsigned char x, unsigned char y, unsig
 	screenX.lineLength[y] = lineLength; // UPdate this here, in case lower level draw code needs original line length
 }
 
-void drawClearLine(unsigned char y, unsigned char color)
+// If this is called from a screen driver, lineLength needs to be preserved
+void drawClearLine(unsigned char y, unsigned char color, unsigned char preserveLength)
 {
+	unsigned char ySave;
+	if (preserveLength)ySave = screenX.lineLength[y]; 
 	drawClearCharsAt(screenX.screenWidth - OS.lmargn, 0, y, color);
+	if (preserveLength)screenX.lineLength[y] = ySave;
 }
+
 
 void drawInsertLine(unsigned char y, unsigned char yBottom, unsigned char color)
 {
