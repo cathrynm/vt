@@ -179,6 +179,9 @@ unsigned short serialStatus(unsigned char *err)
 	cio(IOCB_SERIAL);
 	iocbErrUpdate(IOCB_SERIAL, err);
 	if (*err != ERR_NONE) return 0;
+	if (OS.dvstat[0]) {
+		*err = OS.dvstat[0];
+	}
 	return * (unsigned short *) &OS.dvstat[1];
 }
 

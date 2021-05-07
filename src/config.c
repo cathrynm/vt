@@ -156,15 +156,18 @@ unsigned char *parseParam(unsigned char *prompt, unsigned char p, unsigned char 
 
 void geturl(int *argc, char ***argv, unsigned char *err)
 {
-	static unsigned char error[] = "ERROR: 000\x9b";
+	static unsigned char error[] = "ERROR:    \x9b";
 	unsigned char baud;
-	unsigned char dev;
+	unsigned char dev, n;
 	freeConfig();
 	*argc = 0;
 	*argv = &configData.argv[0];
 	drawChar(clearScreenChar);
 	if (*err != ERR_NONE) {
-		charToA(*err, error, 7);
+		n = charToA(*err, error, 7);
+		for (;n<10;n++) {
+			error[10] = ' ';
+		}
 		drawString(error);
 		*err = ERR_NONE;
 	}
