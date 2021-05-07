@@ -144,24 +144,51 @@ void deleteLineXep(unsigned char y, unsigned char yBottom)
 {
 	unsigned char saveLine, yp;
 	flushBuffer();
-	drawClearLine(y, 0, 1);
 	saveLine = xep.xepLines[y];
-	for (yp = y;yp +1 <= yBottom;yp++) {
-		setXepRowPtr(yp, xep.xepLines[yp+1]);
+	if((yBottom == SCREENLINES - 1) && (screenX.charSet != 'X')) {
+		OS.dspflg = 0;
+		OS.rowcrs = y;
+		OS.colcrs = OS.lmargn;
+		xepCursorShadow();
+		callEColonPutByte(CH_DELLINE);
+		xep.currentXepX = OS.colcrs;
+		for (yp = y;yp+1 <= yBottom;yp++) {
+			xep.xepLines[yp] = xep.xepLines[yp+1];
+		}
+		xep.xepLines[yBottom] = saveLine;
+	} else {
+		drawClearLine(y, 0, 1);
+
+		for (yp = y;yp +1 <= yBottom;yp++) {
+			setXepRowPtr(yp, xep.xepLines[yp+1]);
+		}
+		setXepRowPtr(yBottom, saveLine);
 	}
-	setXepRowPtr(yBottom, saveLine);
 }
 
 void insertLineXep(unsigned char y, unsigned char yBottom)
 {
 	unsigned char yp, saveLine;
 	flushBuffer();
-	drawClearLine(yBottom, 0, 1);
 	saveLine = xep.xepLines[yBottom];
-	for (yp = yBottom;yp > y;yp--) {
-		setXepRowPtr(yp, xep.xepLines[yp-1]);
+	if((yBottom == SCREENLINES - 1) && (screenX.charSet != 'X')) {
+		OS.dspflg = 0;
+		OS.rowcrs = y;
+		OS.colcrs = OS.lmargn;
+		xepCursorShadow();
+		callEColonPutByte(CH_INSLINE);
+		xep.currentXepX = OS.colcrs;
+		for (yp = yBottom;yp > y;yp--) {
+			xep.xepLines[yp] = xep.xepLines[yp-1];
+		}
+		xep.xepLines[y] = saveLine;
+	} else {
+		drawClearLine(yBottom, 0, 1);
+		for (yp = yBottom;yp > y;yp--) {
+			setXepRowPtr(yp, xep.xepLines[yp-1]);
+		}
+		setXepRowPtr(y, saveLine);
 	}
-	setXepRowPtr(y, saveLine);
 }
 
 void clearScreenXep(void)
