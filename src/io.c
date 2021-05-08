@@ -91,45 +91,36 @@ void readData(unsigned char *err) {
 	static unsigned char ctrlS = 19, ctrlQ = 17;
 	unsigned short n;
 	unsigned short inputReady;
+	if (io.pause) {
+		io.pause = 0;
+		sendIoResponse(&ctrlQ, 1, err);
+	}
 	if (!proceedReady())return;
 	for (;;) { // Just keep going until drained.
 		inputReady = ioStatus(err);
 		if (*err != ERR_NONE) {
-					OS.stack[3] = OS.dvstat[1];
-		OS.stack[4] = OS.dvstat[2];
-		OS.stack[5] = io.pause;
 			break;
 		}
 		if (!inputReady) {
-			if (io.pause) {
-				io.pause = 0;
-				sendIoResponse(&ctrlQ, 1, err);
-			}
 			break;
 		}
-		if (inputReady > 40) {
+		if (inputReady > 16) {
 			io.pause = 1;
 			sendIoResponse(&ctrlS, 1, err);
 		}
-		OS.stack[0] = inputReady & 0xff;
-		OS.stack[1] = inputReady >> 8;
-		OS.stack[2] = io.pause;
 		io.readBuffer = malloc(inputReady);
 		if (!io.readBuffer) {
 			*err = ERR_OUTOFMEMORY;
 			break;
 		}
-
 		ioRead(io.readBuffer, inputReady, err);
 		if (*err != ERR_NONE) {
 			free(io.readBuffer);
 			break;
 		}
-
 		for (n = 0;n < inputReady;n++) {
 			decodeUtf8Char(io.readBuffer[n], err);
 		}
-
 		free(io.readBuffer);
 		if (*err != ERR_NONE)break;
 		if (anyKey())break;
