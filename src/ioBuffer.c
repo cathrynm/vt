@@ -28,8 +28,9 @@ void ioBufferInit(void)
 
 unsigned short ioBufferStatus(unsigned char *err)
 {
-	unsigned short outputReady, bank;
-	unsigned short inputReady;unsigned char len;unsigned short wrapLen; // READBUFFERLEN is 255, so fits in char
+	unsigned short outputReady, bankTop;
+	unsigned short inputReady;
+	unsigned char len, bank;
 	if (!ioBuffer.numBanks)return 0;  // No ext memory
 	for(;;) {
 		inputReady = ioStatus(err);
@@ -37,9 +38,8 @@ unsigned short ioBufferStatus(unsigned char *err)
 		if (!inputReady) break;
 		for (;inputReady;inputReady -= len) {
 			len = inputReady < READBUFFERSIZE? inputReady : READBUFFERSIZE;
-			len = ((unsigned short)ioBuffer.writeBankAddr + len <= 0x8000)?  len : (0x8000 - (unsigned short) ioBuffer.writeBankAddr);
-			wrapLen = (ioBuffer.writeBank != ioBuffer.readBank)? READBUFFERSIZE: (ioBuffer.readBankAddr - ioBuffer.writeBankAddr - 1);
-			len = (len < wrapLen)? len: wrapLen;
+			bankTop = (ioBuffer.readBank != ioBuffer.writeBank) || (ioBuffer.writeBankAddr >= ioBuffer.readBankAddr) ? 0x8000: (ioBuffer.readBankAddr - ioBuffer.writeBankAddr - 1);
+			len = ((unsigned short)ioBuffer.writeBankAddr + len <= bankTop)?  len : (bankTop - (unsigned short) ioBuffer.writeBankAddr);
 			if (!len)break;
 			ioRead(readBuffer, len, err);
 			if (*err != ERR_NONE)return 0;

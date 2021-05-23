@@ -12,5 +12,5 @@
 #define FUJINET_ON 0
 #define SERIAL_ON 1
 #define IOBUFFER 1 /* preload all serial data into EXT mem */
-
+#define FLOWXONOFF 0 /* send ctrl-s when buffer is full. This acts weird */
 #endif

@@ -8,7 +8,9 @@ typedef struct {
 #if FUJINET_ON
 	unsigned char sioDevice;
 #endif
+#if FLOWXONOFF
 	unsigned char pause;
+#endif
 } ioStruct;
 ioStruct io;
 
@@ -49,7 +51,9 @@ void ioOpen(unsigned char *deviceName, unsigned char deviceLen, openIoStruct *op
 	} else {
 		io.deviceType = 0;
 	}
+#if FLOWXONOFF
 	io.pause = 0;
+#endif
 #if IOBUFFER
 	ioBufferInit();
 #endif
@@ -111,21 +115,25 @@ void readData(unsigned char *err) {
 			inputReady = ioStatus(err);
 			if (*err != ERR_NONE) break;
 			if (!inputReady) {
+#if FLOWXONOFF
 				if (io.pause) {
 					io.pause = 0;
 					sendIoResponse(&ctrlQ, 1, err);
 				}
+#endif
 				break;
 			}
 			inputReady = inputReady <= READBUFFERSIZE ? inputReady: READBUFFERSIZE;
 			ioRead(readBuffer, inputReady, err);
 			if (*err != ERR_NONE) break;
 		}
-		if (inputReady >= 16) {
+#if FLOWXONOFF
+		if (!io.pause && (inputReady >= READBUFFERSIZE)) {
 			io.pause = 1;
 			sendIoResponse(&ctrlS, 1, err);
 			if (*err != ERR_NONE) break;
 		}
+#endif
 		for (n = 0;n < inputReady && (*err == ERR_NONE);n++) {
 			decodeUtf8Char(readBuffer[n], err);
 		}
