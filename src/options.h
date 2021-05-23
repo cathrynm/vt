@@ -11,5 +11,6 @@
 #define CIO_ON 0
 #define FUJINET_ON 0
 #define SERIAL_ON 1
+#define IOBUFFER 1 /* preload all serial data into EXT mem */
 
 #endif

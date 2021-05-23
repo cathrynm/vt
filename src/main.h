@@ -22,6 +22,8 @@
 #include "detect.h"
 #include "asm.h"
 #include "config.h"
+#include "extram.h"
+#include "iobuffer.h"
 
 #define cio(iocb)			\
 	(__AX__ = (iocb),		\

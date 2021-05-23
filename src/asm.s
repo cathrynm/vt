@@ -74,4 +74,60 @@ readVbxeAddr:
 	jsr writememac
 	tya
 	rts
+.export _readBuffer
+_readBuffer: 
+; needs to be below 0x4000
+; 256 bytes.  How do  you allocate .bs in ca65?
+	.byte 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0
+	.byte 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0
+	.byte 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0
+	.byte 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0
+	.byte 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0
+
+	.byte 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0
+	.byte 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0
+	.byte 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0
+	.byte 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0
+	.byte 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0
+
+
+	.byte 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0
+	.byte 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0
+	.byte 0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0
+.export _copyBankToBufferFrom
+.export _copyBankToBufferTo
+.export _copyBankToBuffer
+_copyBankToBufferFrom = copyBankToBufferFrom + 1
+_copyBankToBufferTo = copyBankToBufferTo + 1
+_copyBankToBuffer:
+ 	stx    $d301
+ 	tax
+ 	ldy #0
+copyBankToBufferFrom:
+	lda    $ffff,y
+copyBankToBufferTo:
+    sta    $ffff,y
+    iny
+    dex
+    bne copyBankToBufferFrom
+    lda #$ff
+    sta $d301
+	rts
+.export _copyReadBufferToBankTo
+.export _copyReadBufferToBank
+_copyReadBufferToBankTo = copyReadBufferToBankTo + 1
+_copyReadBufferToBank:
+ 	stx    $d301
+ 	tax
+ 	ldy #0
+copyReadBufferToBankLoop:
+	lda    _readBuffer,y
+copyReadBufferToBankTo:
+    sta    $ffff,y
+    iny
+    dex
+    bne copyReadBufferToBankLoop
+    lda #$ff
+    sta $d301
+	rts
 _ASMEND:

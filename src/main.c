@@ -28,6 +28,7 @@ void main(int argc, char **argv)
 			argc = 0;
 			continue;
 		}
+		extRamInit();
 		initChio();
 		initScreen();
 		resetVt();

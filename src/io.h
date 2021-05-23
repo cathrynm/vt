@@ -16,5 +16,7 @@ void readData(unsigned char *err);
 void ioOpen(unsigned char *device, unsigned char deviceLen, openIoStruct *openIo, unsigned char *err);
 void ioClose(unsigned char *err);
 void sendIoResponse(unsigned char *s, unsigned char len, unsigned char *err);
+unsigned short ioStatus(unsigned char *err);
+void ioRead(unsigned char *data, unsigned short len, unsigned char *err);
 
 #endif

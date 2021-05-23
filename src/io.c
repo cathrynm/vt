@@ -2,7 +2,6 @@
 
 
 typedef struct {
-	unsigned char *readBuffer;
 	unsigned char *deviceName;
 	unsigned char deviceLen;
 	unsigned char deviceType;
@@ -51,6 +50,9 @@ void ioOpen(unsigned char *deviceName, unsigned char deviceLen, openIoStruct *op
 		io.deviceType = 0;
 	}
 	io.pause = 0;
+#if IOBUFFER
+	ioBufferInit();
+#endif
 }
 
 unsigned short ioStatus(unsigned char *err) {
@@ -91,37 +93,42 @@ void readData(unsigned char *err) {
 	static unsigned char ctrlS = 19, ctrlQ = 17;
 	unsigned short n;
 	unsigned short inputReady;
-	if (io.pause) {
-		io.pause = 0;
-		sendIoResponse(&ctrlQ, 1, err);
-	}
+
 	if (!proceedReady())return;
 	for (;;) { // Just keep going until drained.
-		inputReady = ioStatus(err);
-		if (*err != ERR_NONE) {
-			break;
-		}
+#if IOBUFFER
+		inputReady = ioBufferStatus(err);
+		if (*err != ERR_NONE) break;
+		if (inputReady) {
+			inputReady = inputReady <= READBUFFERSIZE ? inputReady: READBUFFERSIZE;
+			ioBufferRead(readBuffer, inputReady, err);
+			if (*err != ERR_NONE) break;
+		} 
+#else
+		inputReady = 0;
+#endif
 		if (!inputReady) {
-			break;
+			inputReady = ioStatus(err);
+			if (*err != ERR_NONE) break;
+			if (!inputReady) {
+				if (io.pause) {
+					io.pause = 0;
+					sendIoResponse(&ctrlQ, 1, err);
+				}
+				break;
+			}
+			inputReady = inputReady <= READBUFFERSIZE ? inputReady: READBUFFERSIZE;
+			ioRead(readBuffer, inputReady, err);
+			if (*err != ERR_NONE) break;
 		}
-		if (inputReady > 16) {
+		if (inputReady >= 16) {
 			io.pause = 1;
 			sendIoResponse(&ctrlS, 1, err);
+			if (*err != ERR_NONE) break;
 		}
-		io.readBuffer = malloc(inputReady);
-		if (!io.readBuffer) {
-			*err = ERR_OUTOFMEMORY;
-			break;
+		for (n = 0;n < inputReady && (*err == ERR_NONE);n++) {
+			decodeUtf8Char(readBuffer[n], err);
 		}
-		ioRead(io.readBuffer, inputReady, err);
-		if (*err != ERR_NONE) {
-			free(io.readBuffer);
-			break;
-		}
-		for (n = 0;n < inputReady;n++) {
-			decodeUtf8Char(io.readBuffer[n], err);
-		}
-		free(io.readBuffer);
 		if (*err != ERR_NONE)break;
 		if (anyKey())break;
 	}

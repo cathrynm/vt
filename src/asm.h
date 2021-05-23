@@ -12,3 +12,11 @@ extern void *memacReg;
 extern unsigned char SHFLOK_save;
 extern unsigned char LMARGN_save;
 extern unsigned char ASMEND[1]; // VBXE Swap area must be above this address
+#define READBUFFERSIZE 255
+extern unsigned char readBuffer[READBUFFERSIZE];
+
+extern unsigned char *copyBankToBufferFrom;
+extern unsigned char *copyBankToBufferTo;
+void __fastcall__ copyBankToBuffer(unsigned short bankLen);
+extern unsigned char *copyReadBufferToBankTo;
+void __fastcall__ copyReadBufferToBank(unsigned short bankLen);

@@ -22,6 +22,7 @@ unsigned char logMapTrickTest(void)
 void initDetect(void)
 {
 	unsigned short startAddress = (unsigned short)&_STARTADDRESS__; // Start the program on 0x400 boundary.  So 0x400 below is good
+
 	detect.osType = get_ostype() & AT_OS_TYPE_MAIN;
 	detect.origChbas = OS.chbas;
 	detect.logMapTrick = 0;
@@ -81,6 +82,7 @@ void initDetect(void)
 #endif
 	if ((unsigned short) OS.memlo < startAddress)
 		_heapadd(OS.memlo, startAddress - (unsigned short) OS.memlo); // recover memory below font and above lomem
+	extRamDetect();
 }
 
 void closeDetect(void)
