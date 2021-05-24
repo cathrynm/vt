@@ -15,7 +15,7 @@
 
 #define IOCB_SERIAL 3
 typedef struct serialDataStruct serialStruct;
-#define RBUFFERSIZE 0x800 // 1K doesn't work, and 2K does?  Maybe related to MTU? 
+
 struct serialDataStruct {
 	unsigned char *buffer;
 	unsigned char baudWordStop, xlat;

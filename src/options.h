@@ -10,7 +10,8 @@
 #define RAWCON_ON 1
 #define CIO_ON 0
 #define FUJINET_ON 1
-#define SERIAL_ON 0
+#define SERIAL_ON 1
+#define RBUFFERSIZE 0x800 // Buffer size for serial input
 #define IOBUFFER (SERIAL_ON && 1) /* preload all serial data into EXT mem */
 #define FLOWXONOFF 0 /* send ctrl-s when buffer is full. This acts weird */
 #endif
