@@ -488,13 +488,21 @@ void reportTerminalParams(unsigned char mode, unsigned char *err)
 	static unsigned char reportTerminal[32] = "\033[";
 	off = charToA(mode, reportTerminal, 2);
 	reportTerminal[off++] = ';';
+#if SERIAL_ON
 	off = charToA(parityToVt(getParity()), reportTerminal, off); // parity
+#endif
 	reportTerminal[off++] = ';';
+#if SERIAL_ON
 	off = charToA(bitsToVt(getBits()), reportTerminal, off); // bits
+#endif
 	reportTerminal[off++] = ';';
+#if SERIAL_ON
 	off = charToA(serialToVt(getBaud()), reportTerminal, off); // xspd
+#endif
 	reportTerminal[off++] = ';';
+#if SERIAL_ON
 	off = charToA(serialToVt(getBaud()), reportTerminal, off); // rspd
+#endif
 	reportTerminal[off++] = ';';
 	off = charToA(1, reportTerminal, off); // cmul
 	reportTerminal[off++] = ';';

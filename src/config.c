@@ -147,9 +147,9 @@ unsigned char *parseParam(unsigned char *prompt, unsigned char p, unsigned char 
 	#define PARSESTRING " R:\0x9b URL:"
 	#else
 		#if  FUJINET_ON
-			#define PARSESTRING " N:ssh://[fqdn]\0x9b URL:"
+			#define PARSESTRING " N:ssh://[fqdn]\x9b URL:"
 		#else
-			#define PARSESTRING " \0x9b URL:"
+			#define PARSESTRING " \x9b URL:"
 		#endif
 	#endif
 #endif
@@ -157,7 +157,9 @@ unsigned char *parseParam(unsigned char *prompt, unsigned char p, unsigned char 
 void geturl(int *argc, char ***argv, unsigned char *err)
 {
 	static unsigned char error[] = "ERROR:    \x9b";
+#if SERIAL_ON
 	unsigned char baud;
+#endif
 	unsigned char dev, n;
 	freeConfig();
 	*argc = 0;
