@@ -187,6 +187,9 @@ void scrollDown(unsigned char lines)
 
 void scrollUp(unsigned char lines)
 {
+	OS.stack[0x10] = vt.tMargin;
+	OS.stack[0x11] = vt.bMargin;
+	OS.stack[0x12] = 0xab;
 	for(;lines--;) {
 		drawDeleteLine(vt.tMargin, vt.bMargin, vt.color & 0x70);
 	}
@@ -812,6 +815,12 @@ void processCommand(unsigned char c, unsigned char *err)
 			break;
 		case 'P': // Delete character.
 			deleteCharacters(esc.params[0]);
+			break;
+		case 'S':
+			scrollUp(1);
+			break;
+		case 'T':
+			scrollDown(1);
 			break;
 		case 'X':
 			eraseCharacters(esc.params[0]);
