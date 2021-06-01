@@ -168,7 +168,7 @@ void deleteLineRawCon(unsigned char topY, unsigned char bottomY)
 	if (bottomY > topY) {
 		OS.ziocb.command = VBXEBIOS_SCROLLUP;
 		OS.ziocb.aux2 = topY;
-		OS.botscr = bottomY + 1;
+		OS.botscr = bottomY+1;
 		(rawcon.rawTab->xio)();
 		OS.botscr = SCREENLINES;
 	}
