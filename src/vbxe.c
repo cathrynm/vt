@@ -146,6 +146,7 @@ typedef struct {
     unsigned char bios;
     unsigned short XDL_ADR;
     unsigned char XDL_ADR2;
+    unsigned char rmargn;
 } vbxeStruct;
 
 vbxeStruct vbxe;
@@ -202,7 +203,6 @@ unsigned char vbxeTest(void)
 {
     unsigned char y;
     static VBXE_REGS *baseAddr[2] = {(VBXE_REGS *) 0xd640, (VBXE_REGS *) 0xd740};
-    vbxe.sdmctl = OS.sdmctl;
     for (y = 0;y<2;y++) {
         vbxe.regs = baseAddr[y];
         if (testForVbxe()) {
@@ -291,6 +291,8 @@ void initVbxe(void)
 {
     unsigned char err = ERR_NONE;
     unsigned char y;
+    vbxe.rmargn = OS.rmargn;
+    if (OS.rmargn < 40)OS.rmargn = VBXE_WIDTH - 1 - (39 - OS.rmargn);
     vbxe.bankTop = (unsigned char *) (((unsigned short)ASMEND + 0xfff) & 0xf000);  // VBXE needs to start on 0x1000 boundary above ASMEND
     callIocb6(VBXEBIOS_DETECT, 0, 0, &err);
     vbxe.bios = ((err == ERR_NONE) && (OS.ziocb.spare == 96));
@@ -314,6 +316,7 @@ void initVbxe(void)
         screenX.lineTab[y] = (unsigned short) y * VBXE_WIDTH * 2;
         screenX.lineLength[y] = VBXE_WIDTH; // So first clear screen clears old junk
     }
+    vbxe.sdmctl = OS.sdmctl;
     OS.sdmctl = 0;
     vbxe.cursorOn = 0;
 }
@@ -324,16 +327,13 @@ void restoreVbxe(void)
     vbxe.regs->MEMAC_BANK_SEL = vbxe.MEMAC_BANK_SEL;
     if (!vbxe.bios) {
         vbxe.regs->VIDEO_CONTROL = 0;
-        OS.sdmctl = vbxe.sdmctl;
-    } else  {
-// Where S_VBXE.SYS leaves things
-// XDL base address 7e130
-// Screen is at 7ec00  // 7e
-// Character set is at 7c000-7c800 7c
+    } else {
         vbxe.regs->VIDEO_CONTROL = 0x05;
         vbxe.regs->XDL_ADR = vbxe.XDL_ADR; 
         vbxe.regs->XDL_ADR2 = vbxe.XDL_ADR2;
     }
+    OS.rmargn = vbxe.rmargn;
+    OS.sdmctl = vbxe.sdmctl;
 }
 
 void clearScreenVbxe(unsigned char color)

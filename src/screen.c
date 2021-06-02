@@ -70,7 +70,6 @@ void initScreen(void)
 			screen.clearBuffer[(n<<1) + 1] = DEFAULTCOLOR;
 		}
 	}
-	screenX.screenWidth = OS.rmargn + 1; 
 	screen.bufferLen = 0;
 	screen.bufferLineLen = 0;
 	screen.bufferX = 255;
@@ -107,6 +106,7 @@ void initScreen(void)
 			break;
 		}
 	}
+	screenX.screenWidth = OS.rmargn + 1; 
 	drawClearScreen(currentColor()? currentColor() : DEFAULTCOLOR);
 }
 

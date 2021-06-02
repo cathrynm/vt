@@ -1,0 +1,3 @@
+NAME := c
+FLAGS := -DCIO_ON=1 -DFUJINET_ON=1 -DSERIAL_ON=1
+include Include.mak

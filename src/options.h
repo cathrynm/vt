@@ -17,13 +17,13 @@
 #define RAWCON_ON 0
 #endif
 #ifndef CIO_ON
-#define CIO_ON 1
+#define CIO_ON 0
 #endif
 #ifndef FUJINET_ON
-#define FUJINET_ON 1
+#define FUJINET_ON 0
 #endif
 #ifndef SERIAL_ON
-#define SERIAL_ON 1
+#define SERIAL_ON 0
 #endif
 #define RBUFFERSIZE 0x800 // Buffer size for serial input
 #define IOBUFFER (SERIAL_ON && 1) /* preload all serial data into EXT mem */

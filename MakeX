@@ -1,3 +1,3 @@
 NAME := x
-FLAGS := -Dsym=XEP_ON=1 -Dsym=FUJINET_ON=1
+FLAGS := -DXEP_ON=1 -DFUJINET_ON=1
 include Include.mak
