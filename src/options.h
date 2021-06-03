@@ -9,7 +9,7 @@
 #ifndef XEP_ON
 #define XEP_ON 0
 #endif
-#define XEPINTERNALFONT (XEP_ON && 1)
+#define XEPINTERNALFONT (XEP_ON && 0)
 #ifndef DIRECT_ON
 #define DIRECT_ON 0
 #endif
