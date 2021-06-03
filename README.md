@@ -1,6 +1,7 @@
 vt
 vt100 terminal emulator for Atari 8-bit and SpartaDOS.
 Supports Fujinet N:ssh:// or R:
+Use break key to quit
 
 vtc.xex -- CIO version
 vtd.xex -- Direct write 40 column version
