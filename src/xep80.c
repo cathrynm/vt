@@ -146,6 +146,7 @@ void deleteLineXep(unsigned char y, unsigned char yBottom)
 	flushBuffer();
 	saveLine = xep.xepLines[y];
 	if((yBottom == SCREENLINES - 1) && (screenX.charSet != 'X')) {
+		cursorHide();
 		OS.dspflg = 0;
 		OS.rowcrs = y;
 		OS.colcrs = OS.lmargn;
@@ -172,6 +173,7 @@ void insertLineXep(unsigned char y, unsigned char yBottom)
 	flushBuffer();
 	saveLine = xep.xepLines[yBottom];
 	if((yBottom == SCREENLINES - 1) && (screenX.charSet != 'X')) {
+		cursorHide();
 		OS.dspflg = 0;
 		OS.rowcrs = y;
 		OS.colcrs = OS.lmargn;
